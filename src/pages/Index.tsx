@@ -1,10 +1,27 @@
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Trophy, Users, Target, Calendar } from "lucide-react";
+import { Trophy, Users, Target, Calendar, Shield, Plus } from "lucide-react";
+import { Link } from "react-router-dom";
+import Navbar from "@/components/Navbar";
 
 const Index = () => {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 flex items-center justify-center">
+        <div className="text-center">
+          <Shield className="mx-auto h-12 w-12 text-primary animate-pulse mb-4" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
+      <Navbar />
       {/* Hero Section */}
       <section className="relative bg-primary text-primary-foreground py-20 px-6">
         <div className="container mx-auto text-center">
@@ -16,12 +33,23 @@ const Index = () => {
             The ultimate Premier League survival game. Pick a team each week - if they win, you advance. If they lose, you're out!
           </p>
           <div className="flex gap-4 justify-center">
-            <Button size="lg" variant="secondary">
-              Join Game
-            </Button>
-            <Button size="lg" variant="outline" className="border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary">
-              View Standings
-            </Button>
+            {user ? (
+              <>
+                <Button size="lg" variant="secondary" className="flex items-center gap-2">
+                  <Plus size={20} />
+                  Create New Game
+                </Button>
+                <Button size="lg" variant="outline" className="border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary">
+                  View My Games
+                </Button>
+              </>
+            ) : (
+              <Link to="/auth">
+                <Button size="lg" variant="secondary">
+                  Sign In to Play
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
       </section>

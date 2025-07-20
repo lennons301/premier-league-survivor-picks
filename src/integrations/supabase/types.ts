@@ -14,7 +14,188 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      game_players: {
+        Row: {
+          eliminated_gameweek: number | null
+          game_id: string
+          id: string
+          is_eliminated: boolean | null
+          joined_at: string
+          user_id: string
+        }
+        Insert: {
+          eliminated_gameweek?: number | null
+          game_id: string
+          id?: string
+          is_eliminated?: boolean | null
+          joined_at?: string
+          user_id: string
+        }
+        Update: {
+          eliminated_gameweek?: number | null
+          game_id?: string
+          id?: string
+          is_eliminated?: boolean | null
+          joined_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_players_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      games: {
+        Row: {
+          created_at: string
+          created_by: string
+          current_gameweek: number | null
+          id: string
+          max_players: number | null
+          name: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          current_gameweek?: number | null
+          id?: string
+          max_players?: number | null
+          name: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          current_gameweek?: number | null
+          id?: string
+          max_players?: number | null
+          name?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      gameweeks: {
+        Row: {
+          created_at: string
+          deadline: string
+          gameweek_number: number
+          id: string
+          is_active: boolean | null
+        }
+        Insert: {
+          created_at?: string
+          deadline: string
+          gameweek_number: number
+          id?: string
+          is_active?: boolean | null
+        }
+        Update: {
+          created_at?: string
+          deadline?: string
+          gameweek_number?: number
+          id?: string
+          is_active?: boolean | null
+        }
+        Relationships: []
+      }
+      picks: {
+        Row: {
+          created_at: string
+          game_id: string
+          gameweek: number
+          id: string
+          result: string | null
+          team_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          game_id: string
+          gameweek: number
+          id?: string
+          result?: string | null
+          team_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          game_id?: string
+          gameweek?: number
+          id?: string
+          result?: string | null
+          team_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "picks_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "picks_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      teams: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          short_name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          short_name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          short_name?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

@@ -16,6 +16,19 @@ const Navbar = () => {
         </Link>
 
         <div className="flex items-center gap-4">
+          <Link to="/" className="text-sm font-medium hover:text-primary transition-colors">
+            Home
+          </Link>
+          {user && (
+            <>
+              <Link to="/games" className="text-sm font-medium hover:text-primary transition-colors">
+                Games
+              </Link>
+            </>
+          )}
+        </div>
+
+        <div className="flex items-center gap-4">
           {user ? (
             <>
               <div className="flex items-center gap-2">

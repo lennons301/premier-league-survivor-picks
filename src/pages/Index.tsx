@@ -35,13 +35,17 @@ const Index = () => {
           <div className="flex gap-4 justify-center">
             {user ? (
               <>
-                <Button size="lg" variant="secondary" className="flex items-center gap-2">
-                  <Plus size={20} />
-                  Create New Game
-                </Button>
-                <Button size="lg" variant="outline" className="border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary">
-                  View My Games
-                </Button>
+                <Link to="/games/create">
+                  <Button size="lg" variant="secondary" className="flex items-center gap-2">
+                    <Plus size={20} />
+                    Create New Game
+                  </Button>
+                </Link>
+                <Link to="/games">
+                  <Button size="lg" variant="outline" className="border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary">
+                    View My Games
+                  </Button>
+                </Link>
               </>
             ) : (
               <Link to="/auth">

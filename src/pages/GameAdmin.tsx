@@ -129,6 +129,8 @@ const GameAdmin = () => {
         { email: "user_c@test.com", password: "password_c", display_name: "User C" },
       ];
 
+      const createdUserIds = [];
+
       for (const testUser of testUsers) {
         try {
           const { data, error } = await supabase.auth.signUp({
@@ -142,18 +144,72 @@ const GameAdmin = () => {
           if (error && !error.message.includes("already registered")) {
             throw error;
           }
+
+          // If user was created successfully, store the user ID
+          if (data.user && !error) {
+            createdUserIds.push(data.user.id);
+          } else if (error && error.message.includes("already registered")) {
+            // If user already exists, get their ID from profiles table
+            const { data: profileData } = await supabase
+              .from("profiles")
+              .select("user_id")
+              .eq("display_name", testUser.display_name)
+              .single();
+            
+            if (profileData) {
+              createdUserIds.push(profileData.user_id);
+            }
+          }
         } catch (error: any) {
           if (!error.message.includes("already registered")) {
             throw error;
           }
+          
+          // Try to get existing user ID
+          const { data: profileData } = await supabase
+            .from("profiles")
+            .select("user_id")
+            .eq("display_name", testUser.display_name)
+            .single();
+          
+          if (profileData) {
+            createdUserIds.push(profileData.user_id);
+          }
         }
       }
+
+      // Add all users to the current game
+      if (createdUserIds.length > 0 && gameId) {
+        for (const userId of createdUserIds) {
+          // Check if user is already in the game
+          const { data: existingPlayer } = await supabase
+            .from("game_players")
+            .select("id")
+            .eq("game_id", gameId)
+            .eq("user_id", userId)
+            .single();
+
+          // Only add if not already in the game
+          if (!existingPlayer) {
+            await supabase
+              .from("game_players")
+              .insert({
+                game_id: gameId,
+                user_id: userId
+              });
+          }
+        }
+      }
+
+      return createdUserIds;
     },
-    onSuccess: () => {
+    onSuccess: (createdUserIds) => {
       toast({
-        title: "Test users created",
-        description: "Test users have been created successfully",
+        title: "Test users created and added to game",
+        description: `${createdUserIds.length} test users have been created and added to the game successfully`,
       });
+      // Refresh the players list
+      queryClient.invalidateQueries({ queryKey: ["game-players", gameId] });
     },
     onError: (error) => {
       toast({

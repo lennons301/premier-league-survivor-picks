@@ -279,7 +279,10 @@ const GameAdmin = () => {
         .update({
           home_score: parseInt(homeScore),
           away_score: parseInt(awayScore),
+          team_h_score: parseInt(homeScore),
+          team_a_score: parseInt(awayScore),
           is_completed: true,
+          finished: true,
         })
         .eq("id", selectedFixtureId);
 
@@ -291,6 +294,7 @@ const GameAdmin = () => {
         description: "Fixture result has been updated successfully",
       });
       queryClient.invalidateQueries({ queryKey: ["fixtures", game?.current_gameweek] });
+      processPickResults();
       setSelectedFixtureId("");
       setHomeScore("");
       setAwayScore("");
@@ -303,6 +307,77 @@ const GameAdmin = () => {
       });
     },
   });
+
+  const processPickResults = async () => {
+    if (!gameId || !game) return;
+
+    try {
+      // Get all picks for current gameweek
+      const { data: picks, error: picksError } = await supabase
+        .from('picks')
+        .select(`
+          *,
+          fixtures!inner(home_score, away_score, is_completed, home_team_id, away_team_id)
+        `)
+        .eq('game_id', gameId)
+        .eq('gameweek', game.current_gameweek);
+
+      if (picksError) throw picksError;
+
+      // Process results for completed fixtures
+      for (const pick of picks || []) {
+        const fixture = pick.fixtures;
+        if (!fixture.is_completed) continue;
+
+        let result = 'pending';
+        const homeScore = fixture.home_score;
+        const awayScore = fixture.away_score;
+
+        if (homeScore !== null && awayScore !== null) {
+          if (pick.picked_side === 'home') {
+            if (homeScore > awayScore) result = 'win';
+            else if (homeScore < awayScore) result = 'loss';
+            else result = 'draw';
+          } else {
+            if (awayScore > homeScore) result = 'win';
+            else if (awayScore < homeScore) result = 'loss';
+            else result = 'draw';
+          }
+        }
+
+        // Update pick result
+        await supabase
+          .from('picks')
+          .update({ result })
+          .eq('id', pick.id);
+
+        // If loss or draw, eliminate player
+        if (result === 'loss' || result === 'draw') {
+          await supabase
+            .from('game_players')
+            .update({
+              is_eliminated: true,
+              eliminated_gameweek: game.current_gameweek
+            })
+            .eq('game_id', gameId)
+            .eq('user_id', pick.user_id);
+        }
+      }
+
+      toast({
+        title: "Pick results processed",
+        description: "Player eliminations have been updated based on fixture results",
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ["game-players", gameId] });
+    } catch (error: any) {
+      toast({
+        title: "Error processing results",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
 
   const progressGameweekMutation = useMutation({
     mutationFn: async () => {

@@ -300,7 +300,7 @@ const GameAdmin = () => {
       for (const pick of picks) {
         const pickedTeamScore = pick.picked_side === 'home' ? parseInt(homeScore) : parseInt(awayScore);
         const opponentScore = pick.picked_side === 'home' ? parseInt(awayScore) : parseInt(homeScore);
-        const result = pickedTeamScore > opponentScore ? 'success' : 'failure';
+        const result = pickedTeamScore > opponentScore ? 'win' : pickedTeamScore < opponentScore ? 'lose' : 'draw';
 
         // Update pick result
         const { error: updateError } = await supabase
@@ -310,7 +310,7 @@ const GameAdmin = () => {
         if (updateError) throw updateError;
 
         // Handle eliminations if pick failed
-        if (result === 'failure') {
+        if (result === 'lose' || result === 'draw') {
           // Check if this is the first gameweek of the game
           const { data: gameData, error: gameError } = await supabase
             .from("games")

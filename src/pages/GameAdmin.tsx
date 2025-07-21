@@ -129,9 +129,11 @@ const GameAdmin = () => {
         { email: "user_c@test.com", password: "password_c", display_name: "User C" },
       ];
 
+      console.log("Starting test user creation/lookup...");
       const userIds = [];
 
       for (const testUser of testUsers) {
+        console.log(`Processing user: ${testUser.display_name} (${testUser.email})`);
         let userId = null;
         
         try {
@@ -144,48 +146,72 @@ const GameAdmin = () => {
             }
           });
           
+          console.log(`Signup response for ${testUser.email}:`, { data: data?.user?.id, error: error?.message });
+          
           // If user was created successfully
           if (data.user && !error) {
             userId = data.user.id;
+            console.log(`New user created with ID: ${userId}`);
           }
         } catch (error: any) {
-          // User signup failed - this is expected if user already exists
+          console.log(`Signup error for ${testUser.email}:`, error.message);
         }
 
-        // If we don't have a user ID (either because signup failed or user exists), 
-        // get it from the profiles table
+        // If we don't have a user ID, get it from the profiles table
         if (!userId) {
-          const { data: profileData } = await supabase
+          console.log(`Looking up existing user by display_name: ${testUser.display_name}`);
+          const { data: profileData, error: profileError } = await supabase
             .from("profiles")
-            .select("user_id")
+            .select("user_id, display_name")
             .eq("display_name", testUser.display_name)
             .maybeSingle();
           
+          console.log(`Profile lookup result:`, { profileData, profileError });
+          
           if (profileData) {
             userId = profileData.user_id;
+            console.log(`Found existing user with ID: ${userId}`);
+          } else {
+            // Try looking up by email in case display name doesn't match
+            console.log(`Trying to find user by email pattern...`);
+            const { data: allProfiles } = await supabase
+              .from("profiles")
+              .select("user_id, display_name");
+            
+            console.log("All profiles in database:", allProfiles);
           }
         }
 
         // Add to our collection if we found the user
         if (userId) {
           userIds.push(userId);
+          console.log(`Added user ${testUser.display_name} with ID ${userId} to collection`);
+        } else {
+          console.log(`Failed to find user ${testUser.display_name}`);
         }
       }
+
+      console.log(`Total users found: ${userIds.length}`, userIds);
 
       // Add all users to the current game
       let addedCount = 0;
       if (userIds.length > 0 && gameId) {
         for (const userId of userIds) {
+          console.log(`Checking if user ${userId} is already in game ${gameId}`);
+          
           // Check if user is already in the game
-          const { data: existingPlayer } = await supabase
+          const { data: existingPlayer, error: checkError } = await supabase
             .from("game_players")
             .select("id")
             .eq("game_id", gameId)
             .eq("user_id", userId)
             .maybeSingle();
 
+          console.log(`Existing player check:`, { existingPlayer, checkError });
+
           // Only add if not already in the game
           if (!existingPlayer) {
+            console.log(`Adding user ${userId} to game ${gameId}`);
             const { error } = await supabase
               .from("game_players")
               .insert({
@@ -195,11 +221,17 @@ const GameAdmin = () => {
             
             if (!error) {
               addedCount++;
+              console.log(`Successfully added user ${userId} to game`);
+            } else {
+              console.log(`Error adding user ${userId} to game:`, error);
             }
+          } else {
+            console.log(`User ${userId} is already in the game`);
           }
         }
       }
 
+      console.log(`Final result: ${userIds.length} users found, ${addedCount} users added`);
       return { totalUsers: userIds.length, addedCount };
     },
     onSuccess: ({ totalUsers, addedCount }) => {
@@ -211,6 +243,7 @@ const GameAdmin = () => {
       queryClient.invalidateQueries({ queryKey: ["game-players", gameId] });
     },
     onError: (error) => {
+      console.error("Test user creation error:", error);
       toast({
         title: "Error processing test users",
         description: error.message,

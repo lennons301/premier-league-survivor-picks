@@ -129,10 +129,13 @@ const GameAdmin = () => {
         { email: "user_c@test.com", password: "password_c", display_name: "User C" },
       ];
 
-      const createdUserIds = [];
+      const userIds = [];
 
       for (const testUser of testUsers) {
+        let userId = null;
+        
         try {
+          // Try to sign up the user
           const { data, error } = await supabase.auth.signUp({
             email: testUser.email,
             password: testUser.password,
@@ -141,79 +144,75 @@ const GameAdmin = () => {
             }
           });
           
-          if (error && !error.message.includes("already registered")) {
-            throw error;
-          }
-
-          // If user was created successfully, store the user ID
+          // If user was created successfully
           if (data.user && !error) {
-            createdUserIds.push(data.user.id);
-          } else if (error && error.message.includes("already registered")) {
-            // If user already exists, get their ID from profiles table
-            const { data: profileData } = await supabase
-              .from("profiles")
-              .select("user_id")
-              .eq("display_name", testUser.display_name)
-              .single();
-            
-            if (profileData) {
-              createdUserIds.push(profileData.user_id);
-            }
+            userId = data.user.id;
           }
         } catch (error: any) {
-          if (!error.message.includes("already registered")) {
-            throw error;
-          }
-          
-          // Try to get existing user ID
+          // User signup failed - this is expected if user already exists
+        }
+
+        // If we don't have a user ID (either because signup failed or user exists), 
+        // get it from the profiles table
+        if (!userId) {
           const { data: profileData } = await supabase
             .from("profiles")
             .select("user_id")
             .eq("display_name", testUser.display_name)
-            .single();
+            .maybeSingle();
           
           if (profileData) {
-            createdUserIds.push(profileData.user_id);
+            userId = profileData.user_id;
           }
+        }
+
+        // Add to our collection if we found the user
+        if (userId) {
+          userIds.push(userId);
         }
       }
 
       // Add all users to the current game
-      if (createdUserIds.length > 0 && gameId) {
-        for (const userId of createdUserIds) {
+      let addedCount = 0;
+      if (userIds.length > 0 && gameId) {
+        for (const userId of userIds) {
           // Check if user is already in the game
           const { data: existingPlayer } = await supabase
             .from("game_players")
             .select("id")
             .eq("game_id", gameId)
             .eq("user_id", userId)
-            .single();
+            .maybeSingle();
 
           // Only add if not already in the game
           if (!existingPlayer) {
-            await supabase
+            const { error } = await supabase
               .from("game_players")
               .insert({
                 game_id: gameId,
                 user_id: userId
               });
+            
+            if (!error) {
+              addedCount++;
+            }
           }
         }
       }
 
-      return createdUserIds;
+      return { totalUsers: userIds.length, addedCount };
     },
-    onSuccess: (createdUserIds) => {
+    onSuccess: ({ totalUsers, addedCount }) => {
       toast({
-        title: "Test users created and added to game",
-        description: `${createdUserIds.length} test users have been created and added to the game successfully`,
+        title: "Test users processed successfully",
+        description: `Found ${totalUsers} test users, added ${addedCount} new players to the game`,
       });
       // Refresh the players list
       queryClient.invalidateQueries({ queryKey: ["game-players", gameId] });
     },
     onError: (error) => {
       toast({
-        title: "Error creating test users",
+        title: "Error processing test users",
         description: error.message,
         variant: "destructive",
       });

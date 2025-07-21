@@ -198,8 +198,12 @@ const GameDetail = () => {
                   <span className="font-semibold">{players?.length || 0}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Active Players</span>
-                  <span className="font-semibold text-green-600">{activePlayers.length}</span>
+                  <span className="text-muted-foreground">
+                    {game.status === 'open' ? 'Registered Players' : 'Active Players'}
+                  </span>
+                  <span className="font-semibold text-green-600">
+                    {game.status === 'open' ? players?.length || 0 : activePlayers.length}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Eliminated</span>
@@ -264,31 +268,61 @@ const GameDetail = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Users className="h-5 w-5 text-green-600" />
-                  Active Players ({activePlayers.length})
+                  {game.status === 'open' 
+                    ? `Registered Players (${players?.length || 0})`
+                    : `Active Players (${activePlayers.length})`
+                  }
                 </CardTitle>
                 <CardDescription>
-                  Players still in the competition
+                  {game.status === 'open' 
+                    ? 'Players who have joined the game'
+                    : 'Players still in the competition'
+                  }
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {activePlayers.length > 0 ? (
-                  <div className="grid gap-2">
-                    {activePlayers.map((player: any) => (
-                      <div key={player.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white text-sm font-semibold">
-                            {player.profiles?.display_name?.[0]?.toUpperCase() || "U"}
+                {game.status === 'open' ? (
+                  // Show all players when game is open
+                  players && players.length > 0 ? (
+                    <div className="grid gap-2">
+                      {players.map((player: any) => (
+                        <div key={player.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-semibold">
+                              {player.profiles?.display_name?.[0]?.toUpperCase() || "U"}
+                            </div>
+                            <span className="font-medium">{player.profiles?.display_name || "Unknown"}</span>
                           </div>
-                          <span className="font-medium">{player.profiles?.display_name || "Unknown"}</span>
+                          <div className="text-sm text-muted-foreground">
+                            Joined {new Date(player.joined_at).toLocaleDateString()}
+                          </div>
                         </div>
-                        <div className="text-sm text-muted-foreground">
-                          Joined {new Date(player.joined_at).toLocaleDateString()}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground text-center py-4">No players have joined yet</p>
+                  )
                 ) : (
-                  <p className="text-muted-foreground text-center py-4">No active players</p>
+                  // Show only active players when game is active/finished
+                  activePlayers.length > 0 ? (
+                    <div className="grid gap-2">
+                      {activePlayers.map((player: any) => (
+                        <div key={player.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white text-sm font-semibold">
+                              {player.profiles?.display_name?.[0]?.toUpperCase() || "U"}
+                            </div>
+                            <span className="font-medium">{player.profiles?.display_name || "Unknown"}</span>
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            Joined {new Date(player.joined_at).toLocaleDateString()}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground text-center py-4">No active players</p>
+                  )
                 )}
               </CardContent>
             </Card>

@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      fixtures: {
+        Row: {
+          away_score: number | null
+          away_team_id: string
+          created_at: string
+          gameweek: number
+          home_score: number | null
+          home_team_id: string
+          id: string
+          is_completed: boolean | null
+          kickoff_time: string | null
+        }
+        Insert: {
+          away_score?: number | null
+          away_team_id: string
+          created_at?: string
+          gameweek: number
+          home_score?: number | null
+          home_team_id: string
+          id?: string
+          is_completed?: boolean | null
+          kickoff_time?: string | null
+        }
+        Update: {
+          away_score?: number | null
+          away_team_id?: string
+          created_at?: string
+          gameweek?: number
+          home_score?: number | null
+          home_team_id?: string
+          id?: string
+          is_completed?: boolean | null
+          kickoff_time?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fixtures_away_team_id_fkey"
+            columns: ["away_team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixtures_home_team_id_fkey"
+            columns: ["home_team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       game_players: {
         Row: {
           eliminated_gameweek: number | null
@@ -53,34 +104,72 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string
+          current_deadline: string | null
           current_gameweek: number | null
           id: string
           max_players: number | null
           name: string
+          starting_gameweek: number | null
           status: string
           updated_at: string
         }
         Insert: {
           created_at?: string
           created_by: string
+          current_deadline?: string | null
           current_gameweek?: number | null
           id?: string
           max_players?: number | null
           name: string
+          starting_gameweek?: number | null
           status?: string
           updated_at?: string
         }
         Update: {
           created_at?: string
           created_by?: string
+          current_deadline?: string | null
           current_gameweek?: number | null
           id?: string
           max_players?: number | null
           name?: string
+          starting_gameweek?: number | null
           status?: string
           updated_at?: string
         }
         Relationships: []
+      }
+      gameweek_deadlines: {
+        Row: {
+          created_at: string
+          deadline: string
+          game_id: string
+          gameweek: number
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          deadline: string
+          game_id: string
+          gameweek: number
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          deadline?: string
+          game_id?: string
+          gameweek?: number
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gameweek_deadlines_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       gameweeks: {
         Row: {
@@ -109,32 +198,45 @@ export type Database = {
       picks: {
         Row: {
           created_at: string
+          fixture_id: string | null
           game_id: string
           gameweek: number
           id: string
+          picked_side: string | null
           result: string | null
           team_id: string
           user_id: string
         }
         Insert: {
           created_at?: string
+          fixture_id?: string | null
           game_id: string
           gameweek: number
           id?: string
+          picked_side?: string | null
           result?: string | null
           team_id: string
           user_id: string
         }
         Update: {
           created_at?: string
+          fixture_id?: string | null
           game_id?: string
           gameweek?: number
           id?: string
+          picked_side?: string | null
           result?: string | null
           team_id?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "picks_fixture_id_fkey"
+            columns: ["fixture_id"]
+            isOneToOne: false
+            referencedRelation: "fixtures"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "picks_game_id_fkey"
             columns: ["game_id"]
@@ -201,7 +303,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_game_admin: {
+        Args: { game_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

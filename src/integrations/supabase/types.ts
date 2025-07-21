@@ -18,35 +18,83 @@ export type Database = {
         Row: {
           away_score: number | null
           away_team_id: string
+          code: number | null
           created_at: string
+          event: number | null
+          finished: boolean | null
+          finished_provisional: boolean | null
+          fpl_fixture_id: number | null
           gameweek: number
           home_score: number | null
           home_team_id: string
           id: string
           is_completed: boolean | null
           kickoff_time: string | null
+          minutes: number | null
+          provisional_start_time: boolean | null
+          pulse_id: number | null
+          started: boolean | null
+          stats: Json | null
+          team_a: number | null
+          team_a_difficulty: number | null
+          team_a_score: number | null
+          team_h: number | null
+          team_h_difficulty: number | null
+          team_h_score: number | null
         }
         Insert: {
           away_score?: number | null
           away_team_id: string
+          code?: number | null
           created_at?: string
+          event?: number | null
+          finished?: boolean | null
+          finished_provisional?: boolean | null
+          fpl_fixture_id?: number | null
           gameweek: number
           home_score?: number | null
           home_team_id: string
           id?: string
           is_completed?: boolean | null
           kickoff_time?: string | null
+          minutes?: number | null
+          provisional_start_time?: boolean | null
+          pulse_id?: number | null
+          started?: boolean | null
+          stats?: Json | null
+          team_a?: number | null
+          team_a_difficulty?: number | null
+          team_a_score?: number | null
+          team_h?: number | null
+          team_h_difficulty?: number | null
+          team_h_score?: number | null
         }
         Update: {
           away_score?: number | null
           away_team_id?: string
+          code?: number | null
           created_at?: string
+          event?: number | null
+          finished?: boolean | null
+          finished_provisional?: boolean | null
+          fpl_fixture_id?: number | null
           gameweek?: number
           home_score?: number | null
           home_team_id?: string
           id?: string
           is_completed?: boolean | null
           kickoff_time?: string | null
+          minutes?: number | null
+          provisional_start_time?: boolean | null
+          pulse_id?: number | null
+          started?: boolean | null
+          stats?: Json | null
+          team_a?: number | null
+          team_a_difficulty?: number | null
+          team_a_score?: number | null
+          team_h?: number | null
+          team_h_difficulty?: number | null
+          team_h_score?: number | null
         }
         Relationships: [
           {
@@ -173,25 +221,55 @@ export type Database = {
       }
       gameweeks: {
         Row: {
+          average_entry_score: number | null
           created_at: string
+          data_checked: boolean | null
           deadline: string
+          finished: boolean | null
+          fpl_event_id: number | null
           gameweek_number: number
+          highest_score: number | null
+          highest_scoring_entry: number | null
           id: string
           is_active: boolean | null
+          is_current: boolean | null
+          is_next: boolean | null
+          is_previous: boolean | null
+          name: string | null
         }
         Insert: {
+          average_entry_score?: number | null
           created_at?: string
+          data_checked?: boolean | null
           deadline: string
+          finished?: boolean | null
+          fpl_event_id?: number | null
           gameweek_number: number
+          highest_score?: number | null
+          highest_scoring_entry?: number | null
           id?: string
           is_active?: boolean | null
+          is_current?: boolean | null
+          is_next?: boolean | null
+          is_previous?: boolean | null
+          name?: string | null
         }
         Update: {
+          average_entry_score?: number | null
           created_at?: string
+          data_checked?: boolean | null
           deadline?: string
+          finished?: boolean | null
+          fpl_event_id?: number | null
           gameweek_number?: number
+          highest_score?: number | null
+          highest_scoring_entry?: number | null
           id?: string
           is_active?: boolean | null
+          is_current?: boolean | null
+          is_next?: boolean | null
+          is_previous?: boolean | null
+          name?: string | null
         }
         Relationships: []
       }
@@ -202,6 +280,9 @@ export type Database = {
           game_id: string
           gameweek: number
           id: string
+          is_captain: boolean | null
+          is_vice_captain: boolean | null
+          multiplier: number | null
           picked_side: string | null
           result: string | null
           team_id: string
@@ -213,6 +294,9 @@ export type Database = {
           game_id: string
           gameweek: number
           id?: string
+          is_captain?: boolean | null
+          is_vice_captain?: boolean | null
+          multiplier?: number | null
           picked_side?: string | null
           result?: string | null
           team_id: string
@@ -224,6 +308,9 @@ export type Database = {
           game_id?: string
           gameweek?: number
           id?: string
+          is_captain?: boolean | null
+          is_vice_captain?: boolean | null
+          multiplier?: number | null
           picked_side?: string | null
           result?: string | null
           team_id?: string
@@ -279,22 +366,49 @@ export type Database = {
       }
       teams: {
         Row: {
+          code: number | null
           created_at: string
+          fpl_team_id: number | null
           id: string
           name: string
+          pulse_id: number | null
           short_name: string
+          strength_attack_away: number | null
+          strength_attack_home: number | null
+          strength_defence_away: number | null
+          strength_defence_home: number | null
+          strength_overall_away: number | null
+          strength_overall_home: number | null
         }
         Insert: {
+          code?: number | null
           created_at?: string
+          fpl_team_id?: number | null
           id?: string
           name: string
+          pulse_id?: number | null
           short_name: string
+          strength_attack_away?: number | null
+          strength_attack_home?: number | null
+          strength_defence_away?: number | null
+          strength_defence_home?: number | null
+          strength_overall_away?: number | null
+          strength_overall_home?: number | null
         }
         Update: {
+          code?: number | null
           created_at?: string
+          fpl_team_id?: number | null
           id?: string
           name?: string
+          pulse_id?: number | null
           short_name?: string
+          strength_attack_away?: number | null
+          strength_attack_home?: number | null
+          strength_defence_away?: number | null
+          strength_defence_home?: number | null
+          strength_overall_away?: number | null
+          strength_overall_home?: number | null
         }
         Relationships: []
       }
@@ -306,6 +420,60 @@ export type Database = {
       is_game_admin: {
         Args: { game_id: string }
         Returns: boolean
+      }
+      sync_fixture_with_fpl: {
+        Args: {
+          p_fpl_fixture_id: number
+          p_code: number
+          p_event: number
+          p_finished: boolean
+          p_finished_provisional: boolean
+          p_kickoff_time: string
+          p_minutes: number
+          p_provisional_start_time: boolean
+          p_started: boolean
+          p_team_a: number
+          p_team_a_score: number
+          p_team_h: number
+          p_team_h_score: number
+          p_team_h_difficulty: number
+          p_team_a_difficulty: number
+          p_pulse_id: number
+          p_stats?: Json
+        }
+        Returns: string
+      }
+      sync_gameweek_with_fpl: {
+        Args: {
+          p_fpl_event_id: number
+          p_name: string
+          p_deadline_time: string
+          p_finished?: boolean
+          p_data_checked?: boolean
+          p_is_previous?: boolean
+          p_is_current?: boolean
+          p_is_next?: boolean
+          p_average_entry_score?: number
+          p_highest_score?: number
+          p_highest_scoring_entry?: number
+        }
+        Returns: string
+      }
+      sync_team_with_fpl: {
+        Args: {
+          p_fpl_team_id: number
+          p_name: string
+          p_short_name: string
+          p_code?: number
+          p_strength_overall_home?: number
+          p_strength_overall_away?: number
+          p_strength_attack_home?: number
+          p_strength_attack_away?: number
+          p_strength_defence_home?: number
+          p_strength_defence_away?: number
+          p_pulse_id?: number
+        }
+        Returns: string
       }
     }
     Enums: {

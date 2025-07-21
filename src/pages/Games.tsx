@@ -2,11 +2,61 @@ import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, Users, Calendar, Plus, Eye } from "lucide-react";
+import { Trophy, Users, Calendar, Plus, Eye, UserPlus } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/Navbar";
+
+// Join Game Button Component
+const JoinGameButton = ({ gameId }: { gameId: string }) => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const joinGameMutation = useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error("Must be logged in to join game");
+      
+      const { error } = await supabase
+        .from("game_players")
+        .insert({
+          user_id: user.id,
+          game_id: gameId,
+        });
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Joined game successfully!",
+        description: "You can now make picks for this game.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["games"] });
+      queryClient.invalidateQueries({ queryKey: ["my-games", user?.id] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to join game",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  return (
+    <Button
+      size="sm"
+      onClick={() => joinGameMutation.mutate()}
+      disabled={joinGameMutation.isPending || !user}
+      className="flex-1"
+    >
+      <UserPlus size={16} className="mr-2" />
+      {joinGameMutation.isPending ? "Joining..." : "Join"}
+    </Button>
+  );
+};
 
 const Games = () => {
   const { user } = useAuth();
@@ -200,12 +250,17 @@ const Games = () => {
                         <span>{new Date(game.created_at).toLocaleDateString()}</span>
                       </div>
                     </div>
-                    <Link to={`/games/${game.id}`}>
-                      <Button variant="outline" size="sm" className="w-full">
-                        <Eye size={16} className="mr-2" />
-                        View Details
-                      </Button>
-                    </Link>
+                    <div className="flex gap-2">
+                      <Link to={`/games/${game.id}`} className="flex-1">
+                        <Button variant="outline" size="sm" className="w-full">
+                          <Eye size={16} className="mr-2" />
+                          View Details
+                        </Button>
+                      </Link>
+                      {game.status === "open" && (
+                        <JoinGameButton gameId={game.id} />
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
               ))}

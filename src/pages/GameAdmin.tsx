@@ -105,29 +105,49 @@ const GameAdmin = () => {
       ];
 
       const results = [];
+      const errors = [];
+      
       for (const testUser of testUsers) {
-        const { data, error } = await supabase.auth.signUp({
-          email: testUser.email,
-          password: testUser.password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/`,
-            data: {
-              display_name: testUser.display_name
+        try {
+          const { data, error } = await supabase.auth.signUp({
+            email: testUser.email,
+            password: testUser.password,
+            options: {
+              emailRedirectTo: `${window.location.origin}/`,
+              data: {
+                display_name: testUser.display_name
+              }
             }
+          });
+          
+          if (error) {
+            errors.push(`${testUser.email}: ${error.message}`);
+          } else if (data.user) {
+            results.push({ user: data.user, display_name: testUser.display_name });
           }
-        });
-        
-        if (!error && data.user) {
-          results.push({ user: data.user, display_name: testUser.display_name });
+        } catch (err: any) {
+          errors.push(`${testUser.email}: ${err.message}`);
         }
       }
-      return results;
+      
+      return { results, errors };
     },
-    onSuccess: () => {
-      toast({
-        title: "Test users created",
-        description: "4 test users have been created successfully",
-      });
+    onSuccess: (data) => {
+      const { results, errors } = data;
+      if (results.length > 0) {
+        toast({
+          title: "Test users created",
+          description: `${results.length} test users created successfully`,
+        });
+      }
+      if (errors.length > 0) {
+        toast({
+          title: "Some errors occurred",
+          description: `${errors.length} users failed to create`,
+          variant: "destructive",
+        });
+        console.log("Test user creation errors:", errors);
+      }
       queryClient.invalidateQueries({ queryKey: ["all-users"] });
     },
     onError: (error) => {
@@ -184,13 +204,21 @@ const GameAdmin = () => {
         .eq("id", gameId);
       
       if (error) throw error;
+      return newStatus;
     },
-    onSuccess: () => {
+    onSuccess: (newStatus) => {
       toast({
         title: "Game status updated",
-        description: "Game status has been updated successfully",
+        description: `Game status changed to "${newStatus}"`,
       });
       queryClient.invalidateQueries({ queryKey: ["game", gameId] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error updating game status",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 

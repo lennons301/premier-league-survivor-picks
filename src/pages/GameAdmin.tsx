@@ -274,7 +274,8 @@ const GameAdmin = () => {
         throw new Error("Fixture and scores are required");
       }
 
-      const { error } = await supabase
+      // Update fixture result
+      const { error: fixtureError } = await supabase
         .from("fixtures")
         .update({
           home_score: parseInt(homeScore),
@@ -286,22 +287,67 @@ const GameAdmin = () => {
         })
         .eq("id", selectedFixtureId);
 
-      if (error) throw error;
+      if (fixtureError) throw fixtureError;
+
+      // Get all picks for this fixture
+      const { data: picks, error: picksError } = await supabase
+        .from("picks")
+        .select("*")
+        .eq("fixture_id", selectedFixtureId);
+      if (picksError) throw picksError;
+
+      // Process each pick to determine success/failure
+      for (const pick of picks) {
+        const pickedTeamScore = pick.picked_side === 'home' ? parseInt(homeScore) : parseInt(awayScore);
+        const opponentScore = pick.picked_side === 'home' ? parseInt(awayScore) : parseInt(homeScore);
+        const result = pickedTeamScore > opponentScore ? 'success' : 'failure';
+
+        // Update pick result
+        const { error: updateError } = await supabase
+          .from("picks")
+          .update({ result })
+          .eq("id", pick.id);
+        if (updateError) throw updateError;
+
+        // Handle eliminations if pick failed
+        if (result === 'failure') {
+          // Check if this is the first gameweek of the game
+          const { data: gameData, error: gameError } = await supabase
+            .from("games")
+            .select("starting_gameweek")
+            .eq("id", pick.game_id)
+            .single();
+          if (gameError) throw gameError;
+
+          // Only eliminate if it's NOT the first gameweek (unless admin override is implemented later)
+          if (pick.gameweek > gameData.starting_gameweek) {
+            const { error: eliminationError } = await supabase
+              .from("game_players")
+              .update({ 
+                is_eliminated: true, 
+                eliminated_gameweek: pick.gameweek 
+              })
+              .eq("game_id", pick.game_id)
+              .eq("user_id", pick.user_id);
+            if (eliminationError) throw eliminationError;
+          }
+        }
+      }
     },
     onSuccess: () => {
       toast({
-        title: "Fixture result updated",
-        description: "Fixture result has been updated successfully",
+        title: "Fixture result updated successfully!",
+        description: "Pick results and eliminations have been processed",
       });
       queryClient.invalidateQueries({ queryKey: ["fixtures", game?.current_gameweek] });
-      processPickResults();
+      queryClient.invalidateQueries({ queryKey: ["game-players"] });
       setSelectedFixtureId("");
       setHomeScore("");
       setAwayScore("");
     },
     onError: (error) => {
       toast({
-        title: "Error updating fixture",
+        title: "Error updating fixture result",
         description: error.message,
         variant: "destructive",
       });

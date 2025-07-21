@@ -1,24 +1,24 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import Navbar from "@/components/Navbar";
-import { Target, Clock, CheckCircle, AlertCircle } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 
-const MakePick = () => {
-  const { gameId } = useParams();
+export default function MakePick() {
+  const { gameId } = useParams<{ gameId: string }>();
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [selectedTeam, setSelectedTeam] = useState<string>("");
 
-  // Get game details
+  const [selectedFixture, setSelectedFixture] = useState<string>("");
+  const [selectedSide, setSelectedSide] = useState<"home" | "away" | "">("");
+
+  // Fetch game details
   const { data: game } = useQuery({
     queryKey: ["game", gameId],
     queryFn: async () => {
@@ -27,307 +27,347 @@ const MakePick = () => {
         .select("*")
         .eq("id", gameId)
         .single();
-      
       if (error) throw error;
       return data;
     },
   });
 
-  // Get all teams
-  const { data: teams } = useQuery({
-    queryKey: ["teams"],
+  // Fetch fixtures for current gameweek
+  const { data: fixtures } = useQuery({
+    queryKey: ["fixtures", game?.current_gameweek],
     queryFn: async () => {
+      if (!game?.current_gameweek) return [];
       const { data, error } = await supabase
-        .from("teams")
-        .select("*")
-        .order("name");
-      
+        .from("fixtures")
+        .select(`
+          *,
+          home_team:teams!fixtures_home_team_id_fkey (
+            id,
+            name,
+            short_name
+          ),
+          away_team:teams!fixtures_away_team_id_fkey (
+            id,
+            name,
+            short_name
+          )
+        `)
+        .eq("gameweek", game.current_gameweek)
+        .order("kickoff_time");
       if (error) throw error;
       return data;
     },
+    enabled: !!game?.current_gameweek,
   });
 
-  // Get user's previous picks in this game
+  // Fetch user's previous picks for this game
   const { data: previousPicks } = useQuery({
     queryKey: ["previous-picks", gameId, user?.id],
     queryFn: async () => {
-      if (!user) return [];
+      if (!user?.id) return [];
       const { data, error } = await supabase
         .from("picks")
         .select(`
           *,
-          teams(name, short_name)
+          teams (
+            name
+          ),
+          fixtures (
+            home_team:teams!fixtures_home_team_id_fkey (name),
+            away_team:teams!fixtures_away_team_id_fkey (name)
+          )
         `)
         .eq("game_id", gameId)
         .eq("user_id", user.id)
-        .order("gameweek", { ascending: true });
-      
+        .order("gameweek");
       if (error) throw error;
       return data;
     },
-    enabled: !!user,
+    enabled: !!user?.id,
   });
 
-  // Get current pick for this gameweek
+  // Fetch current pick for this gameweek
   const { data: currentPick } = useQuery({
-    queryKey: ["current-pick", gameId, user?.id, game?.current_gameweek],
+    queryKey: ["current-pick", gameId, game?.current_gameweek, user?.id],
     queryFn: async () => {
-      if (!user || !game) return null;
+      if (!user?.id || !game?.current_gameweek) return null;
       const { data, error } = await supabase
         .from("picks")
-        .select(`
-          *,
-          teams(name, short_name)
-        `)
+        .select("*")
         .eq("game_id", gameId)
         .eq("user_id", user.id)
         .eq("gameweek", game.current_gameweek)
         .maybeSingle();
-      
       if (error) throw error;
       return data;
     },
-    enabled: !!user && !!game,
+    enabled: !!user?.id && !!game?.current_gameweek,
   });
+
+  // Set initial selected fixture and side if there's a current pick
+  useEffect(() => {
+    if (currentPick?.fixture_id && currentPick?.picked_side) {
+      setSelectedFixture(currentPick.fixture_id);
+      setSelectedSide(currentPick.picked_side as "home" | "away");
+    }
+  }, [currentPick]);
 
   const submitPickMutation = useMutation({
     mutationFn: async () => {
-      if (!user || !gameId || !selectedTeam || !game) {
+      if (!user?.id || !selectedFixture || !selectedSide || !game) {
         throw new Error("Missing required data");
       }
+
+      const selectedFixtureData = fixtures?.find(f => f.id === selectedFixture);
+      if (!selectedFixtureData) {
+        throw new Error("Invalid fixture selected");
+      }
+
+      const teamId = selectedSide === "home" 
+        ? selectedFixtureData.home_team_id 
+        : selectedFixtureData.away_team_id;
+
+      const pickData = {
+        game_id: gameId,
+        user_id: user.id,
+        team_id: teamId,
+        fixture_id: selectedFixture,
+        picked_side: selectedSide,
+        gameweek: game.current_gameweek,
+      };
 
       if (currentPick) {
         // Update existing pick
         const { error } = await supabase
           .from("picks")
-          .update({
-            team_id: selectedTeam,
-          })
+          .update(pickData)
           .eq("id", currentPick.id);
-        
         if (error) throw error;
       } else {
         // Create new pick
         const { error } = await supabase
           .from("picks")
-          .insert({
-            game_id: gameId,
-            user_id: user.id,
-            team_id: selectedTeam,
-            gameweek: game.current_gameweek,
-            result: "pending"
-          });
-        
+          .insert(pickData);
         if (error) throw error;
       }
     },
     onSuccess: () => {
+      const selectedFixtureData = fixtures?.find(f => f.id === selectedFixture);
+      const teamName = selectedSide === "home" 
+        ? selectedFixtureData?.home_team?.name 
+        : selectedFixtureData?.away_team?.name;
+      
       toast({
-        title: "Pick Submitted!",
-        description: `Your pick for Gameweek ${game?.current_gameweek} has been ${currentPick ? 'updated' : 'submitted'}.`,
+        title: "Pick submitted successfully!",
+        description: `You have picked ${teamName} for gameweek ${game?.current_gameweek}`,
       });
       queryClient.invalidateQueries({ queryKey: ["current-pick"] });
       navigate(`/games/${gameId}`);
     },
-    onError: (error: any) => {
+    onError: (error) => {
+      console.error("Error submitting pick:", error);
       toast({
-        title: "Error",
-        description: error.message || "Failed to submit pick",
+        title: "Error submitting pick",
+        description: "Please try again",
         variant: "destructive",
       });
     },
   });
 
-  const usedTeamIds = previousPicks?.map(pick => pick.team_id) || [];
-  const availableTeams = teams?.filter(team => 
-    !usedTeamIds.includes(team.id) || team.id === currentPick?.team_id
-  ) || [];
-
-  if (!game || !teams) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navbar />
-        <div className="container mx-auto py-8 px-6">
-          <div className="text-center">Loading...</div>
-        </div>
-      </div>
-    );
+  if (!game || !fixtures) {
+    return <div>Loading...</div>;
   }
 
+  // Filter out teams that have already been picked
+  const previouslyPickedTeamIds = previousPicks?.map(pick => pick.team_id) || [];
+  const availableFixtures = fixtures.filter(fixture => 
+    !previouslyPickedTeamIds.includes(fixture.home_team_id) && 
+    !previouslyPickedTeamIds.includes(fixture.away_team_id)
+  );
+
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      <div className="container mx-auto py-8 px-6 max-w-4xl">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Target className="h-8 w-8 text-primary" />
-            Make Your Pick
-          </h1>
-          <p className="text-muted-foreground">
-            Gameweek {game.current_gameweek} • {game.name}
-          </p>
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex items-center gap-4">
+        <Button variant="outline" size="sm" onClick={() => navigate(`/games/${gameId}`)}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Game
+        </Button>
+        <div>
+          <h1 className="text-3xl font-bold">Make Your Pick</h1>
+          <p className="text-muted-foreground">Gameweek {game.current_gameweek} • {game.name}</p>
+        </div>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Select Your Pick for Gameweek {game.current_gameweek}</CardTitle>
+              <CardDescription>
+                Choose a team from the available fixtures. You must pick a different team each gameweek.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                submitPickMutation.mutate();
+              }}>
+                <div className="space-y-4">
+                  <div>
+                    {availableFixtures.length > 0 ? (
+                      <div className="grid gap-4">
+                        {availableFixtures.map((fixture) => (
+                          <div key={fixture.id} className="border rounded-lg p-4">
+                            <div className="text-center mb-3">
+                              <span className="text-sm text-muted-foreground">
+                                {new Date(fixture.kickoff_time).toLocaleDateString()}
+                              </span>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-4">
+                              <label
+                                className={`flex flex-col items-center p-3 border rounded-lg cursor-pointer transition-colors ${
+                                  selectedFixture === fixture.id && selectedSide === "home"
+                                    ? "bg-primary text-primary-foreground border-primary"
+                                    : currentPick?.fixture_id === fixture.id && currentPick?.picked_side === "home"
+                                    ? "bg-green-100 border-green-500 text-green-800"
+                                    : "hover:bg-muted"
+                                }`}
+                              >
+                                <input
+                                  type="radio"
+                                  name="pick"
+                                  value={`${fixture.id}-home`}
+                                  checked={selectedFixture === fixture.id && selectedSide === "home"}
+                                  onChange={() => {
+                                    setSelectedFixture(fixture.id);
+                                    setSelectedSide("home");
+                                  }}
+                                  className="mb-2"
+                                />
+                                <span className="font-medium text-center">{fixture.home_team?.name}</span>
+                                <span className="text-xs text-muted-foreground mt-1">(Home)</span>
+                                {currentPick?.fixture_id === fixture.id && currentPick?.picked_side === "home" && (
+                                  <span className="text-xs mt-1">Current Pick</span>
+                                )}
+                              </label>
+
+                              <label
+                                className={`flex flex-col items-center p-3 border rounded-lg cursor-pointer transition-colors ${
+                                  selectedFixture === fixture.id && selectedSide === "away"
+                                    ? "bg-primary text-primary-foreground border-primary"
+                                    : currentPick?.fixture_id === fixture.id && currentPick?.picked_side === "away"
+                                    ? "bg-green-100 border-green-500 text-green-800"
+                                    : "hover:bg-muted"
+                                }`}
+                              >
+                                <input
+                                  type="radio"
+                                  name="pick"
+                                  value={`${fixture.id}-away`}
+                                  checked={selectedFixture === fixture.id && selectedSide === "away"}
+                                  onChange={() => {
+                                    setSelectedFixture(fixture.id);
+                                    setSelectedSide("away");
+                                  }}
+                                  className="mb-2"
+                                />
+                                <span className="font-medium text-center">{fixture.away_team?.name}</span>
+                                <span className="text-xs text-muted-foreground mt-1">(Away)</span>
+                                {currentPick?.fixture_id === fixture.id && currentPick?.picked_side === "away" && (
+                                  <span className="text-xs mt-1">Current Pick</span>
+                                )}
+                              </label>
+                            </div>
+                            
+                            <div className="text-center mt-2">
+                              <span className="text-sm font-medium">
+                                {fixture.home_team?.short_name} vs {fixture.away_team?.short_name}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <p>No fixtures available to pick from.</p>
+                        <p className="text-sm mt-2">You may have already picked teams from all available fixtures.</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {availableFixtures.length > 0 && (
+                    <Button 
+                      type="submit" 
+                      disabled={!selectedFixture || !selectedSide || submitPickMutation.isPending}
+                      className="w-full"
+                    >
+                      {submitPickMutation.isPending 
+                        ? "Submitting..." 
+                        : currentPick 
+                        ? "Update Pick" 
+                        : "Submit Pick"
+                      }
+                    </Button>
+                  )}
+                </div>
+              </form>
+            </CardContent>
+          </Card>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-3">
-          {/* Pick Form */}
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  {currentPick ? (
-                    <>
-                      <CheckCircle className="h-5 w-5 text-green-600" />
-                      Update Your Pick
-                    </>
-                  ) : (
-                    <>
-                      <Clock className="h-5 w-5" />
-                      Select Your Team
-                    </>
-                  )}
-                </CardTitle>
-                <CardDescription>
-                  {currentPick 
-                    ? `You've already picked ${currentPick.teams?.name}. You can change it below.`
-                    : "Choose a Premier League team for this gameweek. Remember, you can only pick each team once!"
-                  }
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {currentPick && (
-                  <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                    <div className="flex items-center gap-2 text-green-800">
-                      <CheckCircle className="h-4 w-4" />
-                      <span className="font-medium">Current Pick: {currentPick.teams?.name}</span>
-                    </div>
-                  </div>
-                )}
-
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {availableTeams.map((team: any) => {
-                    const isSelected = selectedTeam === team.id;
-                    const isCurrentPick = currentPick?.team_id === team.id;
-                    
-                    return (
-                      <button
-                        key={team.id}
-                        onClick={() => setSelectedTeam(team.id)}
-                        className={`p-4 border rounded-lg text-left transition-all hover:shadow-md ${
-                          isSelected 
-                            ? "border-primary bg-primary/5" 
-                            : isCurrentPick
-                            ? "border-green-500 bg-green-50"
-                            : "border-border hover:border-primary/50"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <div className="font-medium">{team.name}</div>
-                            <div className="text-sm text-muted-foreground">{team.short_name}</div>
-                          </div>
-                          {isCurrentPick && (
-                            <Badge variant="secondary" className="bg-green-100 text-green-800">
-                              Current
-                            </Badge>
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {availableTeams.length === 0 && (
-                  <div className="text-center py-8">
-                    <AlertCircle className="mx-auto h-12 w-12 text-red-500 mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">No Teams Available</h3>
-                    <p className="text-muted-foreground">
-                      You've already used all Premier League teams in this game.
-                    </p>
-                  </div>
-                )}
-
-                <div className="flex gap-4 mt-6">
-                  <Button
-                    variant="outline"
-                    onClick={() => navigate(`/games/${gameId}`)}
-                    className="flex-1"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={() => submitPickMutation.mutate()}
-                    disabled={!selectedTeam || submitPickMutation.isPending}
-                    className="flex-1"
-                  >
-                    {submitPickMutation.isPending 
-                      ? "Submitting..." 
-                      : currentPick 
-                      ? "Update Pick" 
-                      : "Submit Pick"
-                    }
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Previous Picks */}
-          <div className="lg:col-span-1">
-            <Card>
-              <CardHeader>
-                <CardTitle>Your Previous Picks</CardTitle>
-                <CardDescription>
-                  Teams you've already used in this game
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {previousPicks && previousPicks.length > 0 ? (
-                  <div className="space-y-2">
-                    {previousPicks.map((pick: any) => (
-                      <div key={pick.id} className="flex items-center justify-between p-2 bg-muted rounded">
-                        <div>
-                          <div className="font-medium text-sm">{pick.teams?.name}</div>
-                          <div className="text-xs text-muted-foreground">GW {pick.gameweek}</div>
-                        </div>
-                        <Badge 
-                          variant={
-                            pick.result === "win" ? "default" :
-                            pick.result === "lose" ? "destructive" :
-                            pick.result === "draw" ? "secondary" :
-                            "outline"
-                          }
-                          className="text-xs"
-                        >
-                          {pick.result || "pending"}
-                        </Badge>
+        <div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Your Previous Picks</CardTitle>
+              <CardDescription>Teams you've picked in previous gameweeks</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {previousPicks && previousPicks.length > 0 ? (
+                <ul className="space-y-2">
+                  {previousPicks.map((pick) => (
+                    <li key={pick.id} className="flex justify-between items-center p-2 bg-muted rounded">
+                      <div className="flex flex-col">
+                        <span>GW{pick.gameweek}: {pick.teams?.name}</span>
+                        {pick.fixtures && (
+                          <span className="text-xs text-muted-foreground">
+                            vs {pick.picked_side === 'home' 
+                              ? pick.fixtures.away_team?.name 
+                              : pick.fixtures.home_team?.name
+                            } ({pick.picked_side})
+                          </span>
+                        )}
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground text-sm">
-                    No previous picks in this game.
-                  </p>
-                )}
-              </CardContent>
-            </Card>
+                      <span className={`text-sm px-2 py-1 rounded ${
+                        pick.result === 'success' ? 'bg-green-100 text-green-800' :
+                        pick.result === 'failure' ? 'bg-red-100 text-red-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {pick.result || 'pending'}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-muted-foreground text-sm">No previous picks yet.</p>
+              )}
+            </CardContent>
+          </Card>
 
-            <Card className="mt-4">
-              <CardHeader>
-                <CardTitle className="text-sm">Quick Rules</CardTitle>
-              </CardHeader>
-              <CardContent className="text-xs text-muted-foreground space-y-1">
-                <div>• Pick one team per gameweek</div>
-                <div>• Team must WIN to advance</div>
-                <div>• Can't pick same team twice</div>
-                <div>• Draws count as elimination</div>
-                <div>• GW1 failures can rebuy once</div>
-              </CardContent>
-            </Card>
-          </div>
+          <Card className="mt-4">
+            <CardHeader>
+              <CardTitle className="text-sm">Quick Rules</CardTitle>
+            </CardHeader>
+            <CardContent className="text-xs text-muted-foreground space-y-1">
+              <div>• Pick one team per gameweek</div>
+              <div>• Team must WIN to advance</div>
+              <div>• Can't pick same team twice</div>
+              <div>• Draws count as elimination</div>
+              <div>• First week failures don't eliminate</div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
   );
-};
-
-export default MakePick;
+}

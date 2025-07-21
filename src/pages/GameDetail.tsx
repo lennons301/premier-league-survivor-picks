@@ -115,7 +115,7 @@ const GameDetail = () => {
   const activePlayers = players?.filter(p => !p.is_eliminated) || [];
   const eliminatedPlayers = players?.filter(p => p.is_eliminated) || [];
   const isGameCreator = user && game && user.id === game.created_by;
-  const canJoin = user && !myParticipation && game?.status === "open";
+  const canJoin = user && !myParticipation && (game?.status === "open" || isGameCreator);
 
   if (isLoading) {
     return (

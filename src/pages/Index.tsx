@@ -4,9 +4,41 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Trophy, Users, Target, Calendar, Shield, Plus } from "lucide-react";
 import { Link } from "react-router-dom";
 import Navbar from "@/components/Navbar";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 const Index = () => {
   const { user, loading } = useAuth();
+
+  // Fetch active games for stats
+  const { data: gameStats } = useQuery({
+    queryKey: ['game-stats'],
+    queryFn: async () => {
+      const { data: games } = await supabase
+        .from('games')
+        .select(`
+          *,
+          game_players!inner(*)
+        `)
+        .eq('status', 'active');
+
+      if (!games || games.length === 0) return null;
+
+      // Calculate stats from the first active game
+      const game = games[0];
+      const totalPlayers = game.game_players.length;
+      const remainingPlayers = game.game_players.filter((p: any) => !p.is_eliminated).length;
+      const eliminatedPlayers = totalPlayers - remainingPlayers;
+
+      return {
+        currentGameweek: game.current_gameweek,
+        remainingPlayers,
+        eliminatedPlayers,
+        gameId: game.id
+      };
+    },
+    enabled: !!user
+  });
 
   if (loading) {
     return (
@@ -113,41 +145,62 @@ const Index = () => {
         <div className="container mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold mb-4">Current Game</h2>
-            <p className="text-muted-foreground">Gameweek 15 • 8 Players Remaining</p>
+            {gameStats ? (
+              <p className="text-muted-foreground">
+                Gameweek {gameStats.currentGameweek} • {gameStats.remainingPlayers} Players Remaining
+              </p>
+            ) : user ? (
+              <p className="text-muted-foreground">No active games</p>
+            ) : (
+              <p className="text-muted-foreground">Sign in to see current games</p>
+            )}
           </div>
           
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card>
-              <CardHeader className="text-center">
-                <CardTitle className="text-2xl">8</CardTitle>
-                <CardDescription>Players Remaining</CardDescription>
-              </CardHeader>
-            </Card>
-            
-            <Card>
-              <CardHeader className="text-center">
-                <CardTitle className="text-2xl">12</CardTitle>
-                <CardDescription>Players Eliminated</CardDescription>
-              </CardHeader>
-            </Card>
-            
-            <Card>
-              <CardHeader className="text-center">
-                <CardTitle className="text-2xl">15</CardTitle>
-                <CardDescription>Current Gameweek</CardDescription>
-              </CardHeader>
-            </Card>
-            
-            <Card>
-              <CardHeader className="text-center">
-                <div className="flex justify-center mb-2">
-                  <Calendar className="h-6 w-6 text-primary" />
-                </div>
-                <CardTitle className="text-sm">Dec 21</CardTitle>
-                <CardDescription>Next Deadline</CardDescription>
-              </CardHeader>
-            </Card>
-          </div>
+          {gameStats ? (
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <Card>
+                <CardHeader className="text-center">
+                  <CardTitle className="text-2xl">{gameStats.remainingPlayers}</CardTitle>
+                  <CardDescription>Players Remaining</CardDescription>
+                </CardHeader>
+              </Card>
+              
+              <Card>
+                <CardHeader className="text-center">
+                  <CardTitle className="text-2xl">{gameStats.eliminatedPlayers}</CardTitle>
+                  <CardDescription>Players Eliminated</CardDescription>
+                </CardHeader>
+              </Card>
+              
+              <Card>
+                <CardHeader className="text-center">
+                  <CardTitle className="text-2xl">{gameStats.currentGameweek}</CardTitle>
+                  <CardDescription>Current Gameweek</CardDescription>
+                </CardHeader>
+              </Card>
+              
+              <Card>
+                <CardHeader className="text-center">
+                  <div className="flex justify-center mb-2">
+                    <Calendar className="h-6 w-6 text-primary" />
+                  </div>
+                  <CardTitle className="text-sm">
+                    <Link to={`/games/${gameStats.gameId}`} className="hover:underline">
+                      View Game
+                    </Link>
+                  </CardTitle>
+                  <CardDescription>Game Details</CardDescription>
+                </CardHeader>
+              </Card>
+            </div>
+          ) : user ? (
+            <div className="text-center">
+              <p className="text-muted-foreground mb-4">No active games found</p>
+              <Link to="/games/create">
+                <Button>Create a Game</Button>
+              </Link>
+            </div>
+          ) : null}
         </div>
       </section>
 

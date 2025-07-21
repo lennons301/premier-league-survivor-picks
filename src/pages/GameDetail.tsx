@@ -44,15 +44,26 @@ const GameDetail = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("game_players")
-        .select(`
-          *,
-          profiles(display_name)
-        `)
+        .select("*")
         .eq("game_id", gameId)
         .order("joined_at", { ascending: true });
       
       if (error) throw error;
-      return data;
+      
+      if (!data || data.length === 0) return [];
+      
+      // Fetch profiles separately
+      const userIds = data.map(p => p.user_id);
+      const { data: profilesData } = await supabase
+        .from("profiles")
+        .select("user_id, display_name")
+        .in("user_id", userIds);
+      
+      // Merge the data
+      return data.map(player => ({
+        ...player,
+        profiles: profilesData?.find(p => p.user_id === player.user_id)
+      }));
     },
   });
 

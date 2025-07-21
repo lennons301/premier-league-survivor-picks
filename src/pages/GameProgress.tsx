@@ -146,7 +146,7 @@ export default function GameProgress() {
     return sorted;
   }, [userProgress, sortBy, sortOrder]);
 
-  const totalGoalsScored = userProgress.reduce((sum, user) => sum + user.cumulativeGoals, 0);
+  
 
   if (!game) {
     return <div>Loading...</div>;
@@ -177,7 +177,7 @@ export default function GameProgress() {
       </div>
 
       {/* Game Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Players</CardTitle>
@@ -191,18 +191,6 @@ export default function GameProgress() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Goals</CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalGoalsScored}</div>
-            <p className="text-xs text-muted-foreground">
-              From successful picks
-            </p>
-          </CardContent>
-        </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

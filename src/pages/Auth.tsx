@@ -78,7 +78,7 @@ const Auth = () => {
         {/* Hero Section */}
         <div className="hidden lg:flex flex-col justify-center flex-1 text-left">
           <h1 className="text-4xl font-bold text-primary mb-4">
-            Last Man Standing
+            Last Person Standing (LPS)
           </h1>
           <p className="text-xl text-muted-foreground mb-8">
             Test your Premier League knowledge in the ultimate survival game

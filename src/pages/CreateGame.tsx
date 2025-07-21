@@ -98,7 +98,7 @@ const CreateGame = () => {
             <Trophy className="h-8 w-8 text-primary" />
             Create New Game
           </h1>
-          <p className="text-muted-foreground">Set up a new Last Man Standing competition</p>
+          <p className="text-muted-foreground">Set up a new Last Person Standing (LPS) competition</p>
         </div>
 
         <Card>
@@ -108,7 +108,7 @@ const CreateGame = () => {
               Game Settings
             </CardTitle>
             <CardDescription>
-              Configure your Last Man Standing game. You can modify these settings later as the admin.
+              Configure your Last Person Standing (LPS) game. You can modify these settings later as the admin.
             </CardDescription>
           </CardHeader>
           <CardContent>

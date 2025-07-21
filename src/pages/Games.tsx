@@ -136,7 +136,7 @@ const Games = () => {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold">Games</h1>
-            <p className="text-muted-foreground">Join or create Last Man Standing competitions</p>
+            <p className="text-muted-foreground">Join or create Last Person Standing (LPS) competitions</p>
           </div>
           <Link to="/games/create">
             <Button className="flex items-center gap-2">
@@ -271,7 +271,7 @@ const Games = () => {
                 <Trophy className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                 <CardTitle className="mb-2">No Games Available</CardTitle>
                 <CardDescription className="mb-4">
-                  Be the first to create a Last Man Standing game!
+                  Be the first to create a Last Person Standing (LPS) game!
                 </CardDescription>
                 <Link to="/games/create">
                   <Button>

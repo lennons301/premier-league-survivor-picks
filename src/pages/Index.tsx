@@ -60,7 +60,7 @@ const Index = () => {
           <div className="flex justify-center mb-6">
             <Trophy className="h-16 w-16 text-accent" />
           </div>
-          <h1 className="text-5xl font-bold mb-6">Last Man Standing</h1>
+          <h1 className="text-5xl font-bold mb-6">Last Person Standing (LPS)</h1>
           <p className="text-xl mb-8 max-w-2xl mx-auto">
             The ultimate Premier League survival game. Pick a team each week - if they win, you advance. If they lose, you're out!
           </p>
@@ -104,7 +104,7 @@ const Index = () => {
               </CardHeader>
               <CardContent>
                 <CardDescription>
-                  Sign up and join a Last Man Standing competition with up to 20 participants.
+                  Sign up and join a Last Person Standing (LPS) competition with up to 20 participants.
                 </CardDescription>
               </CardContent>
             </Card>

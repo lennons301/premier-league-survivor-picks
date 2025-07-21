@@ -311,26 +311,15 @@ const GameAdmin = () => {
 
         // Handle eliminations if pick failed
         if (result === 'lose' || result === 'draw') {
-          // Check if this is the first gameweek of the game
-          const { data: gameData, error: gameError } = await supabase
-            .from("games")
-            .select("starting_gameweek")
-            .eq("id", pick.game_id)
-            .single();
-          if (gameError) throw gameError;
-
-          // Only eliminate if it's NOT the first gameweek (unless admin override is implemented later)
-          if (pick.gameweek > gameData.starting_gameweek) {
-            const { error: eliminationError } = await supabase
-              .from("game_players")
-              .update({ 
-                is_eliminated: true, 
-                eliminated_gameweek: pick.gameweek 
-              })
-              .eq("game_id", pick.game_id)
-              .eq("user_id", pick.user_id);
-            if (eliminationError) throw eliminationError;
-          }
+          const { error: eliminationError } = await supabase
+            .from("game_players")
+            .update({ 
+              is_eliminated: true, 
+              eliminated_gameweek: pick.gameweek 
+            })
+            .eq("game_id", pick.game_id)
+            .eq("user_id", pick.user_id);
+          if (eliminationError) throw eliminationError;
         }
       }
     },
@@ -398,7 +387,7 @@ const GameAdmin = () => {
           .eq('id', pick.id);
 
         // If loss or draw, eliminate player
-        if (result === 'loss' || result === 'draw') {
+        if (result === 'lose' || result === 'draw') {
           await supabase
             .from('game_players')
             .update({

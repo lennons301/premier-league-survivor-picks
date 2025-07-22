@@ -157,28 +157,38 @@ const GameAdmin = () => {
           console.log(`Signup error for ${testUser.email}:`, error.message);
         }
 
-        // If we don't have a user ID, get it from the profiles table
+        // If we don't have a user ID, try to sign in to get the existing user
         if (!userId) {
-          console.log(`Looking up existing user by display_name: ${testUser.display_name}`);
-          const { data: profileData, error: profileError } = await supabase
-            .from("profiles")
-            .select("user_id, display_name")
-            .eq("display_name", testUser.display_name)
-            .maybeSingle();
-          
-          console.log(`Profile lookup result:`, { profileData, profileError });
-          
-          if (profileData) {
-            userId = profileData.user_id;
-            console.log(`Found existing user with ID: ${userId}`);
-          } else {
-            // Try looking up by email in case display name doesn't match
-            console.log(`Trying to find user by email pattern...`);
-            const { data: allProfiles } = await supabase
-              .from("profiles")
-              .select("user_id, display_name");
-            
-            console.log("All profiles in database:", allProfiles);
+          console.log(`User already exists, trying to sign in: ${testUser.email}`);
+          try {
+            const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+              email: testUser.email,
+              password: testUser.password
+            });
+
+            if (signInData.user && !signInError) {
+              userId = signInData.user.id;
+              console.log(`Signed in existing user with ID: ${userId}`);
+              
+              // Check if profile exists, create if missing
+              const { data: profileData } = await supabase
+                .from("profiles")
+                .select("user_id")
+                .eq("user_id", userId)
+                .maybeSingle();
+              
+              if (!profileData) {
+                console.log(`Creating missing profile for user ${userId}`);
+                await supabase
+                  .from("profiles")
+                  .insert({
+                    user_id: userId,
+                    display_name: testUser.display_name
+                  });
+              }
+            }
+          } catch (signInError) {
+            console.log(`Sign in failed for ${testUser.email}:`, signInError);
           }
         }
 

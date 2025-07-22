@@ -1,0 +1,98 @@
+# Premier League Gameweeks/Events Data
+# Source: https://fantasy.premierleague.com/api/bootstrap-static/
+events:
+  - id: 1
+    name: "Gameweek 1"
+    deadline_time: "2025-08-15T17:30:00Z"
+    average_entry_score: 0
+    finished: false
+    data_checked: false
+    highest_scoring_entry: null
+    deadline_time_epoch: 1755279000
+    deadline_time_game_offset: 0
+    highest_score: null
+    is_previous: false
+    is_current: false
+    is_next: true
+    cup_leagues_created: false
+    h2h_ko_matches_created: false
+    can_enter: true
+    can_manage: true
+    released: true
+    ranked_count: 0
+  - id: 2
+    name: "Gameweek 2"
+    deadline_time: "2025-08-22T17:30:00Z"
+    average_entry_score: 0
+    finished: false
+    data_checked: false
+    highest_scoring_entry: null
+    deadline_time_epoch: 1755883800
+    deadline_time_game_offset: 0
+    highest_score: null
+    is_previous: false
+    is_current: false
+    is_next: false
+    cup_leagues_created: false
+    h2h_ko_matches_created: false
+    can_enter: true
+    can_manage: true
+    released: true
+    ranked_count: 0
+  - id: 3
+    name: "Gameweek 3"
+    deadline_time: "2025-08-29T17:30:00Z"
+    average_entry_score: 0
+    finished: false
+    data_checked: false
+    highest_scoring_entry: null
+    deadline_time_epoch: 1756488600
+    deadline_time_game_offset: 0
+    highest_score: null
+    is_previous: false
+    is_current: false
+    is_next: false
+    cup_leagues_created: false
+    h2h_ko_matches_created: false
+    can_enter: true
+    can_manage: true
+    released: true
+    ranked_count: 0
+  - id: 4
+    name: "Gameweek 4"
+    deadline_time: "2025-09-12T17:30:00Z"
+    average_entry_score: 0
+    finished: false
+    data_checked: false
+    highest_scoring_entry: null
+    deadline_time_epoch: 1757698200
+    deadline_time_game_offset: 0
+    highest_score: null
+    is_previous: false
+    is_current: false
+    is_next: false
+    cup_leagues_created: false
+    h2h_ko_matches_created: false
+    can_enter: true
+    can_manage: true
+    released: true
+    ranked_count: 0
+  - id: 5
+    name: "Gameweek 5"
+    deadline_time: "2025-09-19T17:30:00Z"
+    average_entry_score: 0
+    finished: false
+    data_checked: false
+    highest_scoring_entry: null
+    deadline_time_epoch: 1758303000
+    deadline_time_game_offset: 0
+    highest_score: null
+    is_previous: false
+    is_current: false
+    is_next: false
+    cup_leagues_created: false
+    h2h_ko_matches_created: false
+    can_enter: true
+    can_manage: true
+    released: true
+    ranked_count: 0

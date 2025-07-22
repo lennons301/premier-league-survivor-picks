@@ -124,125 +124,53 @@ const GameAdmin = () => {
   const createTestUsersMutation = useMutation({
     mutationFn: async () => {
       const testUsers = [
-        { email: "user_a@test.com", password: "password_a", display_name: "User A" },
-        { email: "user_b@test.com", password: "password_b", display_name: "User B" },
-        { email: "user_c@test.com", password: "password_c", display_name: "User C" },
+        { email: "user_a@test.com", password: "password_a", display_name: "User A", id: "74ca49f4-c848-4e87-9d7f-2861713e9139" },
+        { email: "user_b@test.com", password: "password_b", display_name: "User B", id: "d5acf5c0-2170-437d-afb9-da3f72b5fd13" },
+        { email: "user_c@test.com", password: "password_c", display_name: "User C", id: "610e271a-cd40-4b70-b9b6-b4eb4fe07c0d" },
       ];
 
-      console.log("Starting test user creation/lookup...");
-      const userIds = [];
-
-      for (const testUser of testUsers) {
-        console.log(`Processing user: ${testUser.display_name} (${testUser.email})`);
-        let userId = null;
-        
-        try {
-          // Try to sign up the user
-          const { data, error } = await supabase.auth.signUp({
-            email: testUser.email,
-            password: testUser.password,
-            options: {
-              data: { display_name: testUser.display_name }
-            }
-          });
-          
-          console.log(`Signup response for ${testUser.email}:`, { data: data?.user?.id, error: error?.message });
-          
-          // If user was created successfully
-          if (data.user && !error) {
-            userId = data.user.id;
-            console.log(`New user created with ID: ${userId}`);
-          }
-        } catch (error: any) {
-          console.log(`Signup error for ${testUser.email}:`, error.message);
-        }
-
-        // If we don't have a user ID, try to sign in to get the existing user
-        if (!userId) {
-          console.log(`User already exists, trying to sign in: ${testUser.email}`);
-          try {
-            const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-              email: testUser.email,
-              password: testUser.password
-            });
-
-            if (signInData.user && !signInError) {
-              userId = signInData.user.id;
-              console.log(`Signed in existing user with ID: ${userId}`);
-              
-              // Check if profile exists, create if missing
-              const { data: profileData } = await supabase
-                .from("profiles")
-                .select("user_id")
-                .eq("user_id", userId)
-                .maybeSingle();
-              
-              if (!profileData) {
-                console.log(`Creating missing profile for user ${userId}`);
-                await supabase
-                  .from("profiles")
-                  .insert({
-                    user_id: userId,
-                    display_name: testUser.display_name
-                  });
-              }
-            }
-          } catch (signInError) {
-            console.log(`Sign in failed for ${testUser.email}:`, signInError);
-          }
-        }
-
-        // Add to our collection if we found the user
-        if (userId) {
-          userIds.push(userId);
-          console.log(`Added user ${testUser.display_name} with ID ${userId} to collection`);
-        } else {
-          console.log(`Failed to find user ${testUser.display_name}`);
-        }
-      }
-
-      console.log(`Total users found: ${userIds.length}`, userIds);
-
-      // Add all users to the current game
+      console.log("Starting test user addition to game...");
+      
+      // Since the users already exist, we'll just use their known IDs and add them to the game
+      // The admin (currently signed in) should be able to add any user to their game
       let addedCount = 0;
-      if (userIds.length > 0 && gameId) {
-        for (const userId of userIds) {
-          console.log(`Checking if user ${userId} is already in game ${gameId}`);
-          
-          // Check if user is already in the game
-          const { data: existingPlayer, error: checkError } = await supabase
+      
+      for (const testUser of testUsers) {
+        console.log(`Checking if user ${testUser.id} (${testUser.display_name}) is already in game ${gameId}`);
+        
+        // Check if user is already in the game
+        const { data: existingPlayer, error: checkError } = await supabase
+          .from("game_players")
+          .select("id")
+          .eq("game_id", gameId)
+          .eq("user_id", testUser.id)
+          .maybeSingle();
+
+        console.log(`Existing player check for ${testUser.display_name}:`, { existingPlayer, checkError });
+
+        // Only add if not already in the game
+        if (!existingPlayer) {
+          console.log(`Adding user ${testUser.id} (${testUser.display_name}) to game ${gameId} as admin`);
+          const { error } = await supabase
             .from("game_players")
-            .select("id")
-            .eq("game_id", gameId)
-            .eq("user_id", userId)
-            .maybeSingle();
-
-          console.log(`Existing player check:`, { existingPlayer, checkError });
-
-          // Only add if not already in the game
-          if (!existingPlayer) {
-            console.log(`Adding user ${userId} to game ${gameId}`);
-            const { error } = await supabase
-              .from("game_players")
-              .insert({
-                game_id: gameId,
-                user_id: userId
-              });
-            
-            if (!error) {
-              addedCount++;
-              console.log(`Successfully added user ${userId} to game`);
-            } else {
-              console.log(`Error adding user ${userId} to game:`, error);
-            }
+            .insert({
+              game_id: gameId,
+              user_id: testUser.id
+            });
+          
+          if (!error) {
+            addedCount++;
+            console.log(`Successfully added ${testUser.display_name} to game`);
           } else {
-            console.log(`User ${userId} is already in the game`);
+            console.log(`Error adding ${testUser.display_name} to game:`, error);
           }
+        } else {
+          console.log(`${testUser.display_name} is already in the game`);
         }
       }
 
-      console.log(`Final result: ${userIds.length} users found, ${addedCount} users added`);
-      return { totalUsers: userIds.length, addedCount };
+      console.log(`Final result: ${addedCount} users added out of ${testUsers.length} total users`);
+      return { totalUsers: testUsers.length, addedCount };
     },
     onSuccess: ({ totalUsers, addedCount }) => {
       toast({

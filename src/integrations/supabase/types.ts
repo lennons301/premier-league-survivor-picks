@@ -113,6 +113,39 @@ export type Database = {
           },
         ]
       }
+      game_gameweeks: {
+        Row: {
+          created_at: string
+          game_id: string
+          gameweek_id: string
+          gameweek_number: number
+          id: string
+          picks_visible: boolean
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          game_id: string
+          gameweek_id: string
+          gameweek_number: number
+          id?: string
+          picks_visible?: boolean
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          game_id?: string
+          gameweek_id?: string
+          gameweek_number?: number
+          id?: string
+          picks_visible?: boolean
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       game_players: {
         Row: {
           eliminated_gameweek: number | null
@@ -417,6 +450,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_all_picks_made: {
+        Args: { p_game_id: string; p_gameweek_number: number }
+        Returns: boolean
+      }
+      check_and_finish_games_after_results: {
+        Args: { p_gameweek_number: number }
+        Returns: undefined
+      }
       is_game_admin: {
         Args: { game_id: string }
         Returns: boolean

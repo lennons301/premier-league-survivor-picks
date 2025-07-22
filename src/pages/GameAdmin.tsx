@@ -326,7 +326,7 @@ const GameAdmin = () => {
       for (const pick of picks) {
         const pickedTeamScore = pick.picked_side === 'home' ? parseInt(homeScore) : parseInt(awayScore);
         const opponentScore = pick.picked_side === 'home' ? parseInt(awayScore) : parseInt(homeScore);
-        const result = pickedTeamScore > opponentScore ? 'win' : pickedTeamScore < opponentScore ? 'lose' : 'draw';
+        const result = pickedTeamScore > opponentScore ? 'win' : pickedTeamScore < opponentScore ? 'loss' : 'draw';
 
         // Update pick result
         const { error: updateError } = await supabase
@@ -336,7 +336,7 @@ const GameAdmin = () => {
         if (updateError) throw updateError;
 
         // Handle eliminations if pick failed
-        if (result === 'lose' || result === 'draw') {
+        if (result === 'loss' || result === 'draw') {
           const { error: eliminationError } = await supabase
             .from("game_players")
             .update({ 
@@ -413,7 +413,7 @@ const GameAdmin = () => {
           .eq('id', pick.id);
 
         // If loss or draw, eliminate player
-        if (result === 'lose' || result === 'draw') {
+        if (result === 'loss' || result === 'draw') {
           await supabase
             .from('game_players')
             .update({
@@ -617,15 +617,25 @@ const GameAdmin = () => {
                 <CardContent className="space-y-4">
                   <div>
                     <Label>Current Gameweek: {game.current_gameweek}</Label>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => progressGameweekMutation.mutate()}
-                      disabled={progressGameweekMutation.isPending}
-                      className="ml-2"
-                    >
-                      {progressGameweekMutation.isPending ? "Progressing..." : "Progress to Next GW"}
-                    </Button>
+                    <div className="flex gap-2 mt-2">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={processPickResults}
+                        className="flex items-center gap-2"
+                      >
+                        <CheckCircle className="h-4 w-4" />
+                        Process Results
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => progressGameweekMutation.mutate()}
+                        disabled={progressGameweekMutation.isPending}
+                      >
+                        {progressGameweekMutation.isPending ? "Progressing..." : "Progress to Next GW"}
+                      </Button>
+                    </div>
                   </div>
 
                   <Separator />

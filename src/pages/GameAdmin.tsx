@@ -527,14 +527,6 @@ const GameAdmin = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => updateGameStatusMutation.mutate("open")}
-                      disabled={game.status === "open"}
-                    >
-                      Set Open
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
                       onClick={() => updateGameStatusMutation.mutate("active")}
                       disabled={game.status === "active"}
                     >

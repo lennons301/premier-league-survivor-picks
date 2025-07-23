@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Clock } from "lucide-react";
 
 export default function MakePick() {
   const { gameId } = useParams<{ gameId: string }>();
@@ -17,6 +17,7 @@ export default function MakePick() {
 
   const [selectedFixture, setSelectedFixture] = useState<string>("");
   const [selectedSide, setSelectedSide] = useState<"home" | "away" | "">("");
+  const [timeRemaining, setTimeRemaining] = useState<string>("");
 
   // Fetch game details
   const { data: game } = useQuery({
@@ -104,6 +105,34 @@ export default function MakePick() {
     enabled: !!user?.id && !!game?.current_gameweek,
   });
 
+  // Fetch current gameweek deadline
+  const { data: currentDeadline } = useQuery({
+    queryKey: ["current-deadline", gameId, game?.current_gameweek],
+    queryFn: async () => {
+      if (!game?.current_gameweek) return null;
+      
+      // First try to get game-specific deadline
+      const { data: gameDeadline } = await supabase
+        .from("gameweek_deadlines")
+        .select("*")
+        .eq("game_id", gameId)
+        .eq("gameweek", game.current_gameweek)
+        .single();
+      
+      if (gameDeadline) return gameDeadline;
+      
+      // Fall back to global gameweek deadline
+      const { data: globalDeadline } = await supabase
+        .from("gameweeks")
+        .select("*")
+        .eq("gameweek_number", game.current_gameweek)
+        .single();
+      
+      return globalDeadline ? { deadline: globalDeadline.deadline } : null;
+    },
+    enabled: !!game?.current_gameweek,
+  });
+
   // Set initial selected fixture and side if there's a current pick
   useEffect(() => {
     if (currentPick?.fixture_id && currentPick?.picked_side) {
@@ -111,6 +140,39 @@ export default function MakePick() {
       setSelectedSide(currentPick.picked_side as "home" | "away");
     }
   }, [currentPick]);
+
+  // Countdown timer effect
+  useEffect(() => {
+    if (!currentDeadline?.deadline) return;
+
+    const updateCountdown = () => {
+      const now = new Date().getTime();
+      const deadline = new Date(currentDeadline.deadline).getTime();
+      const difference = deadline - now;
+
+      if (difference > 0) {
+        const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+
+        if (days > 0) {
+          setTimeRemaining(`${days}d ${hours}h ${minutes}m`);
+        } else if (hours > 0) {
+          setTimeRemaining(`${hours}h ${minutes}m ${seconds}s`);
+        } else {
+          setTimeRemaining(`${minutes}m ${seconds}s`);
+        }
+      } else {
+        setTimeRemaining("Deadline passed");
+      }
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+
+    return () => clearInterval(interval);
+  }, [currentDeadline?.deadline]);
 
   const submitPickMutation = useMutation({
     mutationFn: async () => {
@@ -195,6 +257,12 @@ export default function MakePick() {
         <div>
           <h1 className="text-3xl font-bold">Make Your Pick</h1>
           <p className="text-muted-foreground">Gameweek {game.current_gameweek} • {game.name}</p>
+          {timeRemaining && (
+            <div className="flex items-center gap-1 mt-1">
+              <Clock className="h-4 w-4 text-orange-600" />
+              <span className="text-sm font-semibold text-orange-600">{timeRemaining}</span>
+            </div>
+          )}
         </div>
       </div>
 

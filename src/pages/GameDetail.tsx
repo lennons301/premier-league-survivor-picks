@@ -7,13 +7,15 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/Navbar";
-import { Trophy, Users, Calendar, Target, UserPlus, Settings, Play } from "lucide-react";
+import { Trophy, Users, Calendar, Target, UserPlus, Settings, Play, Clock } from "lucide-react";
+import { useState, useEffect } from "react";
 
 const GameDetail = () => {
   const { gameId } = useParams();
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [timeRemaining, setTimeRemaining] = useState<string>("");
 
   const { data: game, isLoading } = useQuery({
     queryKey: ["game", gameId],
@@ -84,6 +86,67 @@ const GameDetail = () => {
     enabled: !!user,
   });
 
+  // Fetch current gameweek deadline
+  const { data: currentDeadline } = useQuery({
+    queryKey: ["current-deadline", gameId, game?.current_gameweek],
+    queryFn: async () => {
+      if (!game?.current_gameweek) return null;
+      
+      // First try to get game-specific deadline
+      const { data: gameDeadline } = await supabase
+        .from("gameweek_deadlines")
+        .select("*")
+        .eq("game_id", gameId)
+        .eq("gameweek", game.current_gameweek)
+        .single();
+      
+      if (gameDeadline) return gameDeadline;
+      
+      // Fall back to global gameweek deadline
+      const { data: globalDeadline } = await supabase
+        .from("gameweeks")
+        .select("*")
+        .eq("gameweek_number", game.current_gameweek)
+        .single();
+      
+      return globalDeadline ? { deadline: globalDeadline.deadline } : null;
+    },
+    enabled: !!game?.current_gameweek,
+  });
+
+  // Countdown timer effect
+  useEffect(() => {
+    if (!currentDeadline?.deadline) return;
+
+    const updateCountdown = () => {
+      const now = new Date().getTime();
+      const deadline = new Date(currentDeadline.deadline).getTime();
+      const difference = deadline - now;
+
+      if (difference > 0) {
+        const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+
+        if (days > 0) {
+          setTimeRemaining(`${days}d ${hours}h ${minutes}m`);
+        } else if (hours > 0) {
+          setTimeRemaining(`${hours}h ${minutes}m ${seconds}s`);
+        } else {
+          setTimeRemaining(`${minutes}m ${seconds}s`);
+        }
+      } else {
+        setTimeRemaining("Deadline passed");
+      }
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+
+    return () => clearInterval(interval);
+  }, [currentDeadline?.deadline]);
+
   const joinGameMutation = useMutation({
     mutationFn: async () => {
       if (!user || !gameId) throw new Error("User not logged in");
@@ -116,7 +179,6 @@ const GameDetail = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "open": return "bg-green-500";
       case "active": return "bg-blue-500";
       case "finished": return "bg-gray-500";
       default: return "bg-gray-500";
@@ -126,7 +188,7 @@ const GameDetail = () => {
   const activePlayers = players?.filter(p => !p.is_eliminated) || [];
   const eliminatedPlayers = players?.filter(p => p.is_eliminated) || [];
   const isGameCreator = user && game && user.id === game.created_by;
-  const canJoin = user && !myParticipation && (game?.status === "open" || isGameCreator);
+  const canJoin = user && !myParticipation && (game?.status === "active" || isGameCreator);
 
   if (isLoading) {
     return (
@@ -204,16 +266,23 @@ const GameDetail = () => {
                   <span className="text-muted-foreground">Current Gameweek</span>
                   <span className="font-semibold">{game.current_gameweek}</span>
                 </div>
+                {timeRemaining && game.status === "active" && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Pick Deadline</span>
+                    <div className="flex items-center gap-1">
+                      <Clock className="h-4 w-4" />
+                      <span className="font-semibold text-orange-600">{timeRemaining}</span>
+                    </div>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Total Players</span>
                   <span className="font-semibold">{players?.length || 0}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">
-                    {game.status === 'open' ? 'Registered Players' : 'Active Players'}
-                  </span>
+                  <span className="text-muted-foreground">Active Players</span>
                   <span className="font-semibold text-green-600">
-                    {game.status === 'open' ? players?.length || 0 : activePlayers.length}
+                    {activePlayers.length}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -244,28 +313,19 @@ const GameDetail = () => {
                     </Button>
                   )}
                   
-                  {myParticipation && !myParticipation.is_eliminated && (
+                  {myParticipation && !myParticipation.is_eliminated && game.status === "active" && (
                     <>
-                      {game.status === "active" ? (
-                        <>
-                          <Link to={`/games/${gameId}/pick`}>
-                            <Button className="w-full">
-                              <Play size={16} className="mr-2" />
-                              Make Pick for GW {game.current_gameweek}
-                            </Button>
-                          </Link>
-                          <Link to={`/games/${gameId}/progress`}>
-                            <Button variant="outline" className="w-full">
-                              View Progress
-                            </Button>
-                          </Link>
-                        </>
-                      ) : (
-                        <Button disabled className="w-full">
-                          <Calendar size={16} className="mr-2" />
-                          Waiting for game to start
+                      <Link to={`/games/${gameId}/pick`}>
+                        <Button className="w-full">
+                          <Play size={16} className="mr-2" />
+                          Make Pick for GW {game.current_gameweek}
                         </Button>
-                      )}
+                      </Link>
+                      <Link to={`/games/${gameId}/progress`}>
+                        <Button variant="outline" className="w-full">
+                          View Progress
+                        </Button>
+                      </Link>
                     </>
                   )}
                   
@@ -286,61 +346,31 @@ const GameDetail = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Users className="h-5 w-5 text-green-600" />
-                  {game.status === 'open' 
-                    ? `Registered Players (${players?.length || 0})`
-                    : `Active Players (${activePlayers.length})`
-                  }
+                  Active Players ({activePlayers.length})
                 </CardTitle>
                 <CardDescription>
-                  {game.status === 'open' 
-                    ? 'Players who have joined the game'
-                    : 'Players still in the competition'
-                  }
+                  Players still in the competition
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {game.status === 'open' ? (
-                  // Show all players when game is open
-                  players && players.length > 0 ? (
-                    <div className="grid gap-2">
-                      {players.map((player: any) => (
-                        <div key={player.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-semibold">
-                              {player.profiles?.display_name?.[0]?.toUpperCase() || "U"}
-                            </div>
-                            <span className="font-medium">{player.profiles?.display_name || "Unknown"}</span>
+                {activePlayers.length > 0 ? (
+                  <div className="grid gap-2">
+                    {activePlayers.map((player: any) => (
+                      <div key={player.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white text-sm font-semibold">
+                            {player.profiles?.display_name?.[0]?.toUpperCase() || "U"}
                           </div>
-                          <div className="text-sm text-muted-foreground">
-                            Joined {new Date(player.joined_at).toLocaleDateString()}
-                          </div>
+                          <span className="font-medium">{player.profiles?.display_name || "Unknown"}</span>
                         </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-muted-foreground text-center py-4">No players have joined yet</p>
-                  )
+                        <div className="text-sm text-muted-foreground">
+                          Joined {new Date(player.joined_at).toLocaleDateString()}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 ) : (
-                  // Show only active players when game is active/finished
-                  activePlayers.length > 0 ? (
-                    <div className="grid gap-2">
-                      {activePlayers.map((player: any) => (
-                        <div key={player.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white text-sm font-semibold">
-                              {player.profiles?.display_name?.[0]?.toUpperCase() || "U"}
-                            </div>
-                            <span className="font-medium">{player.profiles?.display_name || "Unknown"}</span>
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            Joined {new Date(player.joined_at).toLocaleDateString()}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-muted-foreground text-center py-4">No active players</p>
-                  )
+                  <p className="text-muted-foreground text-center py-4">No active players</p>
                 )}
               </CardContent>
             </Card>

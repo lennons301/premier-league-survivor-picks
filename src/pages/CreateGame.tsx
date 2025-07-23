@@ -11,6 +11,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import Navbar from "@/components/Navbar";
 import { Trophy, Settings } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 
 const formSchema = z.object({
   name: z.string().min(1, "Game name is required"),
@@ -23,16 +25,59 @@ const CreateGame = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // Fetch next available gameweek
+  const { data: nextGameweek } = useQuery({
+    queryKey: ["next-gameweek"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("gameweeks")
+        .select("*")
+        .eq("is_next", true)
+        .single();
+      
+      if (error) {
+        // If no next gameweek, get current + 1
+        const { data: currentData } = await supabase
+          .from("gameweeks")
+          .select("*")
+          .eq("is_current", true)
+          .single();
+        
+        if (currentData) {
+          return {
+            gameweek_number: currentData.gameweek_number + 1,
+            deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+          };
+        }
+        
+        return {
+          gameweek_number: 1,
+          deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+        };
+      }
+      
+      return data;
+    },
+  });
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
       max_players: undefined,
-      starting_gameweek: 1,
-      deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16),
+      starting_gameweek: nextGameweek?.gameweek_number || 1,
+      deadline: nextGameweek?.deadline?.slice(0, 16) || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16),
     },
   });
+
+  // Update form values when nextGameweek data loads
+  useEffect(() => {
+    if (nextGameweek) {
+      form.setValue("starting_gameweek", nextGameweek.gameweek_number);
+      form.setValue("deadline", nextGameweek.deadline?.slice(0, 16) || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16));
+    }
+  }, [nextGameweek, form]);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     if (!user) return;
@@ -46,6 +91,7 @@ const CreateGame = () => {
           starting_gameweek: values.starting_gameweek,
           current_gameweek: values.starting_gameweek,
           created_by: user.id,
+          status: 'active',
         })
         .select()
         .single();

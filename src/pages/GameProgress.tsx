@@ -1,5 +1,5 @@
 import { useParams, Link } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -8,14 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowLeft, Trophy, Users, Target, ChevronDown, ChevronUp, Check, X, Clock, Lock } from "lucide-react";
 import { useState, useMemo } from "react";
-import { useToast } from "@/hooks/use-toast";
 import PickHistory from "@/components/PickHistory";
 
 export default function GameProgress() {
   const { gameId } = useParams<{ gameId: string }>();
   const { user } = useAuth();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
   const [sortBy, setSortBy] = useState<'name' | 'goals' | 'status'>('goals');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
@@ -90,6 +87,21 @@ export default function GameProgress() {
       return data;
     },
     enabled: !!game?.current_gameweek,
+  });
+
+  // Fetch all game gameweeks for pick history
+  const { data: allGameGameweeks } = useQuery({
+    queryKey: ["all-game-gameweeks", gameId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("game_gameweeks")
+        .select("*")
+        .eq("game_id", gameId)
+        .order("gameweek_number");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!gameId,
   });
 
   // Fetch all picks for this game with results
@@ -196,37 +208,6 @@ export default function GameProgress() {
   // Check if user is admin
   const isAdmin = user && game && game.created_by === user.id;
 
-  // Mutation to activate gameweek manually
-  const activateGameweekMutation = useMutation({
-    mutationFn: async () => {
-      if (!gameGameweek) throw new Error("Game gameweek not found");
-      
-      const { error } = await supabase
-        .from("game_gameweeks")
-        .update({ 
-          status: 'active',
-          picks_visible: true
-        })
-        .eq("id", gameGameweek.id);
-      
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast({
-        title: "Gameweek activated",
-        description: "Picks are now visible for the current gameweek",
-      });
-      queryClient.invalidateQueries({ queryKey: ["game-gameweek", gameId, game?.current_gameweek] });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error activating gameweek",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
   const handleSort = (column: 'name' | 'goals' | 'status') => {
     if (sortBy === column) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
@@ -259,15 +240,6 @@ export default function GameProgress() {
                 {gameGameweek.status === 'active' && <Lock className="h-3 w-3 mr-1" />}
                 {gameGameweek.status}
               </Badge>
-            )}
-            {isAdmin && gameGameweek?.status === 'open' && (
-              <Button 
-                size="sm" 
-                onClick={() => activateGameweekMutation.mutate()}
-                disabled={activateGameweekMutation.isPending}
-              >
-                {activateGameweekMutation.isPending ? "Activating..." : "Activate Gameweek"}
-              </Button>
             )}
           </div>
         </div>
@@ -492,6 +464,7 @@ export default function GameProgress() {
         allPicks={allPicks || []} 
         players={players || []} 
         currentGameweek={game.current_gameweek || 1}
+        gameGameweeks={allGameGameweeks || []}
       />
     </div>
   );

@@ -24,13 +24,20 @@ interface Player {
   profiles: { display_name: string } | null;
 }
 
+interface GameGameweek {
+  gameweek_number: number;
+  status: string;
+  picks_visible: boolean;
+}
+
 interface PickHistoryProps {
   allPicks: Pick[];
   players: Player[];
   currentGameweek: number;
+  gameGameweeks?: GameGameweek[];
 }
 
-export default function PickHistory({ allPicks, players, currentGameweek }: PickHistoryProps) {
+export default function PickHistory({ allPicks, players, currentGameweek, gameGameweeks }: PickHistoryProps) {
   // Group picks by gameweek
   const picksByGameweek = allPicks.reduce((acc, pick) => {
     if (!acc[pick.gameweek]) acc[pick.gameweek] = [];
@@ -68,6 +75,8 @@ export default function PickHistory({ allPicks, players, currentGameweek }: Pick
         {gameweeks.map((gameweek) => {
           const gameweekPicks = picksByGameweek[gameweek];
           const isCurrentGameweek = gameweek === currentGameweek;
+          const gameGameweek = gameGameweeks?.find(gg => gg.gameweek_number === gameweek);
+          const shouldShowPickDetails = gameGameweek?.status === 'active' || gameGameweek?.status === 'finished';
           
           return (
             <div key={gameweek} className="space-y-3">
@@ -111,39 +120,47 @@ export default function PickHistory({ allPicks, players, currentGameweek }: Pick
                         )}
                       </TableCell>
                       <TableCell>
-                        <div className="text-sm">
-                          <span className="font-medium">
-                            {pick.picked_side === 'home' 
-                              ? pick.fixtures?.home_team.short_name 
-                              : pick.fixtures?.away_team.short_name}
-                          </span>
-                          <div className="text-xs text-muted-foreground">
-                            ({pick.picked_side})
+                        {shouldShowPickDetails ? (
+                          <div className="text-sm">
+                            <span className="font-medium">
+                              {pick.picked_side === 'home' 
+                                ? pick.fixtures?.home_team.short_name 
+                                : pick.fixtures?.away_team.short_name}
+                            </span>
+                            <div className="text-xs text-muted-foreground">
+                              ({pick.picked_side})
+                            </div>
                           </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {pick.result ? (
-                          <Badge 
-                            variant={
-                              pick.result === 'win' ? 'default' : 
-                              pick.result === 'draw' ? 'secondary' : 
-                              'destructive'
-                            }
-                            className={
-                              pick.result === 'win' ? 'bg-green-100 text-green-800' : ''
-                            }
-                          >
-                            {pick.result === 'win' ? 'Win' : 
-                             pick.result === 'draw' ? 'Draw' : 
-                             'Loss'}
-                          </Badge>
                         ) : (
-                          <Badge variant="outline">Pending</Badge>
+                          <span className="text-muted-foreground text-sm">Pick hidden</span>
                         )}
                       </TableCell>
                       <TableCell>
-                        {pick.result === 'win' && pick.fixtures?.is_completed ? (
+                        {shouldShowPickDetails ? (
+                          pick.result ? (
+                            <Badge 
+                              variant={
+                                pick.result === 'win' ? 'default' : 
+                                pick.result === 'draw' ? 'secondary' : 
+                                'destructive'
+                              }
+                              className={
+                                pick.result === 'win' ? 'bg-green-100 text-green-800' : ''
+                              }
+                            >
+                              {pick.result === 'win' ? 'Win' : 
+                               pick.result === 'draw' ? 'Draw' : 
+                               'Loss'}
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline">Pending</Badge>
+                          )
+                        ) : (
+                          <Badge variant="outline">Hidden</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {shouldShowPickDetails && pick.result === 'win' && pick.fixtures?.is_completed ? (
                           <div className="flex items-center gap-2">
                             <span className="text-lg font-bold text-primary">
                               {pick.picked_side === 'home' 

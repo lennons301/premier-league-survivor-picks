@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/Navbar";
 import { 
   Settings, Target, Users, TrendingUp, UserPlus, Calendar, 
-  Trophy, Clock, CheckCircle, XCircle, Plus, Edit 
+  Trophy, Clock, CheckCircle, XCircle, Plus, Edit, Lock 
 } from "lucide-react";
 
 const GameAdmin = () => {
@@ -118,6 +118,23 @@ const GameAdmin = () => {
       if (error) throw error;
       return data;
     },
+  });
+
+  // Fetch game gameweek status
+  const { data: gameGameweek } = useQuery({
+    queryKey: ["game-gameweek", gameId, game?.current_gameweek],
+    queryFn: async () => {
+      if (!game?.current_gameweek) return null;
+      const { data, error } = await supabase
+        .from("game_gameweeks")
+        .select("*")
+        .eq("game_id", gameId)
+        .eq("gameweek_number", game.current_gameweek)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!game?.current_gameweek,
   });
 
   // Mutations
@@ -465,6 +482,37 @@ const GameAdmin = () => {
     },
   });
 
+  // Mutation to activate gameweek manually
+  const activateGameweekMutation = useMutation({
+    mutationFn: async () => {
+      if (!gameGameweek) throw new Error("Game gameweek not found");
+      
+      const { error } = await supabase
+        .from("game_gameweeks")
+        .update({ 
+          status: 'active',
+          picks_visible: true
+        })
+        .eq("id", gameGameweek.id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Gameweek activated",
+        description: "Picks are now visible for the current gameweek",
+      });
+      queryClient.invalidateQueries({ queryKey: ["game-gameweek", gameId, game?.current_gameweek] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error activating gameweek",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Check if user is admin
   if (!user || !game || game.created_by !== user.id) {
     return (
@@ -608,7 +656,18 @@ const GameAdmin = () => {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                    <Label>Current Gameweek: {game.current_gameweek}</Label>
+                    <div className="flex items-center gap-4 mb-2">
+                      <Label>Current Gameweek: {game.current_gameweek}</Label>
+                      {gameGameweek && (
+                        <Badge variant={
+                          gameGameweek.status === 'open' ? 'secondary' : 
+                          gameGameweek.status === 'active' ? 'default' : 
+                          'outline'
+                        }>
+                          {gameGameweek.status}
+                        </Badge>
+                      )}
+                    </div>
                     <div className="flex gap-2 mt-2">
                       <Button
                         variant="secondary"
@@ -619,6 +678,18 @@ const GameAdmin = () => {
                         <CheckCircle className="h-4 w-4" />
                         Process Results
                       </Button>
+                      {gameGameweek?.status === 'open' && (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => activateGameweekMutation.mutate()}
+                          disabled={activateGameweekMutation.isPending}
+                          className="flex items-center gap-2"
+                        >
+                          <Lock className="h-4 w-4" />
+                          {activateGameweekMutation.isPending ? "Activating..." : "Activate Gameweek"}
+                        </Button>
+                      )}
                       <Button
                         variant="outline"
                         size="sm"

@@ -1,15 +1,20 @@
 import { useParams, Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Trophy, Users, Target, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, Trophy, Users, Target, ChevronDown, ChevronUp, Check, X, Clock, Lock } from "lucide-react";
 import { useState, useMemo } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function GameProgress() {
   const { gameId } = useParams<{ gameId: string }>();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [sortBy, setSortBy] = useState<'name' | 'goals' | 'status'>('goals');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
@@ -53,6 +58,37 @@ export default function GameProgress() {
         profiles: profilesData?.find(p => p.user_id === player.user_id)
       }));
     },
+  });
+
+  // Fetch current gameweek info
+  const { data: currentGameweek } = useQuery({
+    queryKey: ["current-gameweek"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("gameweeks")
+        .select("*")
+        .eq("is_current", true)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Fetch game gameweek status
+  const { data: gameGameweek } = useQuery({
+    queryKey: ["game-gameweek", gameId, game?.current_gameweek],
+    queryFn: async () => {
+      if (!game?.current_gameweek) return null;
+      const { data, error } = await supabase
+        .from("game_gameweeks")
+        .select("*")
+        .eq("game_id", gameId)
+        .eq("gameweek_number", game.current_gameweek)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!game?.current_gameweek,
   });
 
   // Fetch all picks for this game with results
@@ -104,6 +140,8 @@ export default function GameProgress() {
     
     return players.map(player => {
       const userPicks = allPicks.filter(pick => pick.user_id === player.user_id);
+      const currentGameweekPick = userPicks.find(pick => pick.gameweek === game?.current_gameweek);
+      
       const cumulativeGoals = userPicks.reduce((sum, pick) => {
         if (pick.result === 'win' && pick.fixtures?.is_completed) {
           const goals = pick.picked_side === 'home' 
@@ -125,10 +163,12 @@ export default function GameProgress() {
         cumulativeGoals,
         gameweekResults,
         totalPicks: userPicks.length,
-        winningPicks: userPicks.filter(p => p.result === 'win').length
+        winningPicks: userPicks.filter(p => p.result === 'win').length,
+        hasCurrentGameweekPick: !!currentGameweekPick,
+        currentGameweekPick: currentGameweekPick
       };
     });
-  }, [players, allPicks]);
+  }, [players, allPicks, game?.current_gameweek]);
 
   // Sort users
   const sortedUsers = useMemo(() => {
@@ -152,6 +192,40 @@ export default function GameProgress() {
     return <div>Loading...</div>;
   }
 
+  // Check if user is admin
+  const isAdmin = user && game && game.created_by === user.id;
+
+  // Mutation to activate gameweek manually
+  const activateGameweekMutation = useMutation({
+    mutationFn: async () => {
+      if (!gameGameweek) throw new Error("Game gameweek not found");
+      
+      const { error } = await supabase
+        .from("game_gameweeks")
+        .update({ 
+          status: 'active',
+          picks_visible: true
+        })
+        .eq("id", gameGameweek.id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Gameweek activated",
+        description: "Picks are now visible for the current gameweek",
+      });
+      queryClient.invalidateQueries({ queryKey: ["game-gameweek", gameId, game?.current_gameweek] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error activating gameweek",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleSort = (column: 'name' | 'goals' | 'status') => {
     if (sortBy === column) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
@@ -172,7 +246,29 @@ export default function GameProgress() {
         </Link>
         <div>
           <h1 className="text-3xl font-bold">{game.name} - Progress</h1>
-          <p className="text-muted-foreground">Current Gameweek: {game.current_gameweek}</p>
+          <div className="flex items-center gap-4">
+            <p className="text-muted-foreground">Current Gameweek: {game.current_gameweek}</p>
+            {gameGameweek && (
+              <Badge variant={
+                gameGameweek.status === 'open' ? 'secondary' : 
+                gameGameweek.status === 'active' ? 'default' : 
+                'outline'
+              }>
+                {gameGameweek.status === 'open' && <Clock className="h-3 w-3 mr-1" />}
+                {gameGameweek.status === 'active' && <Lock className="h-3 w-3 mr-1" />}
+                {gameGameweek.status}
+              </Badge>
+            )}
+            {isAdmin && gameGameweek?.status === 'open' && (
+              <Button 
+                size="sm" 
+                onClick={() => activateGameweekMutation.mutate()}
+                disabled={activateGameweekMutation.isPending}
+              >
+                {activateGameweekMutation.isPending ? "Activating..." : "Activate Gameweek"}
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -252,6 +348,9 @@ export default function GameProgress() {
                   </div>
                 </TableHead>
                 <TableHead>Record</TableHead>
+                {gameGameweek?.status === 'open' && (
+                  <TableHead>GW{game.current_gameweek} Pick Status</TableHead>
+                )}
                 <TableHead>Recent Gameweeks</TableHead>
               </TableRow>
             </TableHeader>
@@ -290,44 +389,72 @@ export default function GameProgress() {
                       </div>
                     </div>
                   </TableCell>
+                  {gameGameweek?.status === 'open' && (
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {user.hasCurrentGameweekPick ? (
+                          <div className="flex items-center gap-1 text-green-600">
+                            <Check className="h-4 w-4" />
+                            <span className="text-sm font-medium">Picked</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1 text-red-600">
+                            <X className="h-4 w-4" />
+                            <span className="text-sm font-medium">Not Picked</span>
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+                  )}
                   <TableCell>
                     <div className="flex gap-1">
                       {Object.entries(user.gameweekResults)
                         .sort(([a], [b]) => Number(b) - Number(a))
-                        .slice(0, 5)
-                        .map(([gameweek, picks]) => {
-                          const pick = picks[0]; // One pick per gameweek
-                          return (
-                            <div
-                              key={gameweek}
-                              title={`GW${gameweek}: ${pick?.result || 'pending'} ${
-                                pick?.result === 'win' && pick?.fixtures?.is_completed
-                                  ? `(${pick.picked_side === 'home' 
-                                      ? pick.fixtures.home_score 
-                                      : pick.fixtures.away_score} goals)`
-                                  : ''
-                              }`}
-                              className={`w-8 h-8 rounded text-xs flex items-center justify-center font-medium ${
-                                pick?.result === 'win' 
-                                  ? 'bg-green-100 text-green-800' 
-                                  : pick?.result === 'lose' || pick?.result === 'draw'
-                                  ? 'bg-red-100 text-red-800'
-                                  : 'bg-gray-100 text-gray-600'
-                              }`}
-                            >
-                              {pick?.result === 'win' && pick?.fixtures?.is_completed
-                                ? pick.picked_side === 'home' 
-                                  ? pick.fixtures.home_score 
-                                  : pick.fixtures.away_score
-                                : pick?.result === 'lose' 
-                                ? 'L'
-                                : pick?.result === 'draw'
-                                ? 'D'
-                                : '?'
-                              }
-                            </div>
-                          );
-                        })
+                         .slice(0, 5)
+                         .map(([gameweek, picks]) => {
+                           const pick = picks[0]; // One pick per gameweek
+                           const isCurrentGameweek = Number(gameweek) === game?.current_gameweek;
+                           const shouldShowPick = gameGameweek?.picks_visible || !isCurrentGameweek;
+                           
+                           return (
+                             <div
+                               key={gameweek}
+                               title={
+                                 shouldShowPick 
+                                   ? `GW${gameweek}: ${pick?.result || 'pending'} ${
+                                       pick?.result === 'win' && pick?.fixtures?.is_completed
+                                         ? `(${pick.picked_side === 'home' 
+                                             ? pick.fixtures.home_score 
+                                             : pick.fixtures.away_score} goals)`
+                                         : ''
+                                     }`
+                                   : `GW${gameweek}: Pick hidden until gameweek is active`
+                               }
+                               className={`w-8 h-8 rounded text-xs flex items-center justify-center font-medium ${
+                                 !shouldShowPick && isCurrentGameweek
+                                   ? 'bg-gray-200 text-gray-500'
+                                   : pick?.result === 'win' 
+                                   ? 'bg-green-100 text-green-800' 
+                                   : pick?.result === 'lose' || pick?.result === 'draw'
+                                   ? 'bg-red-100 text-red-800'
+                                   : 'bg-gray-100 text-gray-600'
+                               }`}
+                             >
+                               {!shouldShowPick && isCurrentGameweek
+                                 ? '?'
+                                 : pick?.result === 'win' && pick?.fixtures?.is_completed
+                                 ? pick.picked_side === 'home' 
+                                   ? pick.fixtures.home_score 
+                                   : pick.fixtures.away_score
+                                 : pick?.result === 'lose' 
+                                 ? 'L'
+                                 : pick?.result === 'draw'
+                                 ? 'D'
+                                 : '?'
+                               }
+                             </div>
+                           );
+                         })
                       }
                     </div>
                   </TableCell>

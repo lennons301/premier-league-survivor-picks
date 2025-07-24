@@ -76,7 +76,7 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
           const gameweekPicks = picksByGameweek[gameweek];
           const isCurrentGameweek = gameweek === currentGameweek;
           const gameGameweek = gameGameweeks?.find(gg => gg.gameweek_number === gameweek);
-          const shouldShowPickDetails = gameGameweek?.status === 'active' || gameGameweek?.status === 'finished';
+          const shouldShowPickDetails = (gameGameweek?.status === 'active' || gameGameweek?.status === 'finished') && gameGameweek?.status !== 'open';
           
           return (
             <div key={gameweek} className="space-y-3">

@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ArrowLeft, Trophy, Users, Target, ChevronDown, ChevronUp, Check, X, Clock, Lock } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
+import PickHistory from "@/components/PickHistory";
 
 export default function GameProgress() {
   const { gameId } = useParams<{ gameId: string }>();
@@ -351,6 +352,9 @@ export default function GameProgress() {
                 {gameGameweek?.status === 'open' && (
                   <TableHead>GW{game.current_gameweek} Pick Status</TableHead>
                 )}
+                {gameGameweek?.status === 'active' && (
+                  <TableHead>GW{game.current_gameweek} Pick</TableHead>
+                )}
                 <TableHead>Recent Gameweeks</TableHead>
               </TableRow>
             </TableHeader>
@@ -404,6 +408,24 @@ export default function GameProgress() {
                           </div>
                         )}
                       </div>
+                    </TableCell>
+                  )}
+                  {gameGameweek?.status === 'active' && (
+                    <TableCell>
+                      {user.currentGameweekPick ? (
+                        <div className="text-sm">
+                          <div className="font-medium">
+                            {user.currentGameweekPick.fixtures?.home_team?.short_name} vs {user.currentGameweekPick.fixtures?.away_team?.short_name}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            Picked: {user.currentGameweekPick.picked_side === 'home' 
+                              ? user.currentGameweekPick.fixtures?.home_team?.short_name 
+                              : user.currentGameweekPick.fixtures?.away_team?.short_name}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">No pick</span>
+                      )}
                     </TableCell>
                   )}
                   <TableCell>
@@ -464,6 +486,13 @@ export default function GameProgress() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Pick History */}
+      <PickHistory 
+        allPicks={allPicks || []} 
+        players={players || []} 
+        currentGameweek={game.current_gameweek || 1}
+      />
     </div>
   );
 }

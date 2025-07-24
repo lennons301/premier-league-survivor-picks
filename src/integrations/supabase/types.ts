@@ -450,6 +450,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      activate_gameweeks_past_deadline: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       check_all_picks_made: {
         Args: { p_game_id: string; p_gameweek_number: number }
         Returns: boolean

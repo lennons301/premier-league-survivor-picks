@@ -240,12 +240,12 @@ export default function MakePick() {
     return <div>Loading...</div>;
   }
 
-  // Filter out teams that have already been picked
+  // Get teams that have already been picked
   const previouslyPickedTeamIds = previousPicks?.map(pick => pick.team_id) || [];
-  const availableFixtures = fixtures.filter(fixture => 
-    !previouslyPickedTeamIds.includes(fixture.home_team_id) && 
-    !previouslyPickedTeamIds.includes(fixture.away_team_id)
-  );
+  const previousPicksMap = previousPicks?.reduce((acc, pick) => {
+    acc[pick.team_id] = pick.gameweek;
+    return acc;
+  }, {} as Record<string, number>) || {};
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -282,9 +282,15 @@ export default function MakePick() {
               }}>
                 <div className="space-y-4">
                   <div>
-                    {availableFixtures.length > 0 ? (
+                    {fixtures.length > 0 ? (
                       <div className="grid gap-4">
-                        {availableFixtures.map((fixture) => (
+                        {fixtures.map((fixture) => {
+                          const isHomeTeamPicked = previouslyPickedTeamIds.includes(fixture.home_team_id);
+                          const isAwayTeamPicked = previouslyPickedTeamIds.includes(fixture.away_team_id);
+                          const homeTeamPickedGameweek = previousPicksMap[fixture.home_team_id];
+                          const awayTeamPickedGameweek = previousPicksMap[fixture.away_team_id];
+                          
+                          return (
                           <div key={fixture.id} className="border rounded-lg p-4">
                             <div className="text-center mb-3">
                               <span className="text-sm text-muted-foreground">
@@ -294,12 +300,14 @@ export default function MakePick() {
                             
                             <div className="grid grid-cols-2 gap-4">
                               <label
-                                className={`flex flex-col items-center p-3 border rounded-lg cursor-pointer transition-colors ${
-                                  selectedFixture === fixture.id && selectedSide === "home"
-                                    ? "bg-primary text-primary-foreground border-primary"
+                                className={`flex flex-col items-center p-3 border rounded-lg transition-colors ${
+                                  isHomeTeamPicked
+                                    ? "opacity-50 cursor-not-allowed bg-gray-50 border-gray-300"
+                                    : selectedFixture === fixture.id && selectedSide === "home"
+                                    ? "bg-primary text-primary-foreground border-primary cursor-pointer"
                                     : currentPick?.fixture_id === fixture.id && currentPick?.picked_side === "home"
-                                    ? "bg-green-100 border-green-500 text-green-800"
-                                    : "hover:bg-muted"
+                                    ? "bg-green-100 border-green-500 text-green-800 cursor-pointer"
+                                    : "hover:bg-muted cursor-pointer"
                                 }`}
                               >
                                 <input
@@ -308,25 +316,33 @@ export default function MakePick() {
                                   value={`${fixture.id}-home`}
                                   checked={selectedFixture === fixture.id && selectedSide === "home"}
                                   onChange={() => {
-                                    setSelectedFixture(fixture.id);
-                                    setSelectedSide("home");
+                                    if (!isHomeTeamPicked) {
+                                      setSelectedFixture(fixture.id);
+                                      setSelectedSide("home");
+                                    }
                                   }}
+                                  disabled={isHomeTeamPicked}
                                   className="mb-2"
                                 />
                                 <span className="font-medium text-center">{fixture.home_team?.name}</span>
                                 <span className="text-xs text-muted-foreground mt-1">(Home)</span>
+                                {isHomeTeamPicked && (
+                                  <span className="text-xs mt-1 text-red-600">Picked GW{homeTeamPickedGameweek}</span>
+                                )}
                                 {currentPick?.fixture_id === fixture.id && currentPick?.picked_side === "home" && (
                                   <span className="text-xs mt-1">Current Pick</span>
                                 )}
                               </label>
 
                               <label
-                                className={`flex flex-col items-center p-3 border rounded-lg cursor-pointer transition-colors ${
-                                  selectedFixture === fixture.id && selectedSide === "away"
-                                    ? "bg-primary text-primary-foreground border-primary"
+                                className={`flex flex-col items-center p-3 border rounded-lg transition-colors ${
+                                  isAwayTeamPicked
+                                    ? "opacity-50 cursor-not-allowed bg-gray-50 border-gray-300"
+                                    : selectedFixture === fixture.id && selectedSide === "away"
+                                    ? "bg-primary text-primary-foreground border-primary cursor-pointer"
                                     : currentPick?.fixture_id === fixture.id && currentPick?.picked_side === "away"
-                                    ? "bg-green-100 border-green-500 text-green-800"
-                                    : "hover:bg-muted"
+                                    ? "bg-green-100 border-green-500 text-green-800 cursor-pointer"
+                                    : "hover:bg-muted cursor-pointer"
                                 }`}
                               >
                                 <input
@@ -335,13 +351,19 @@ export default function MakePick() {
                                   value={`${fixture.id}-away`}
                                   checked={selectedFixture === fixture.id && selectedSide === "away"}
                                   onChange={() => {
-                                    setSelectedFixture(fixture.id);
-                                    setSelectedSide("away");
+                                    if (!isAwayTeamPicked) {
+                                      setSelectedFixture(fixture.id);
+                                      setSelectedSide("away");
+                                    }
                                   }}
+                                  disabled={isAwayTeamPicked}
                                   className="mb-2"
                                 />
                                 <span className="font-medium text-center">{fixture.away_team?.name}</span>
                                 <span className="text-xs text-muted-foreground mt-1">(Away)</span>
+                                {isAwayTeamPicked && (
+                                  <span className="text-xs mt-1 text-red-600">Picked GW{awayTeamPickedGameweek}</span>
+                                )}
                                 {currentPick?.fixture_id === fixture.id && currentPick?.picked_side === "away" && (
                                   <span className="text-xs mt-1">Current Pick</span>
                                 )}
@@ -354,17 +376,17 @@ export default function MakePick() {
                               </span>
                             </div>
                           </div>
-                        ))}
+                        );
+                        })}
                       </div>
                     ) : (
                       <div className="text-center py-8 text-muted-foreground">
-                        <p>No fixtures available to pick from.</p>
-                        <p className="text-sm mt-2">You may have already picked teams from all available fixtures.</p>
+                        <p>No fixtures available for this gameweek.</p>
                       </div>
                     )}
                   </div>
 
-                  {availableFixtures.length > 0 && (
+                  {fixtures.length > 0 && (
                     <Button 
                       type="submit" 
                       disabled={!selectedFixture || !selectedSide || submitPickMutation.isPending}

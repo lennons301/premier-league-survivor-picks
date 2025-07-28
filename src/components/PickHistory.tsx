@@ -3,6 +3,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Target, ChevronDown, ChevronUp } from "lucide-react";
 import { useMemo, useState } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 
 interface Pick {
   id: string;
@@ -10,6 +12,7 @@ interface Pick {
   user_id: string;
   picked_side: string;
   result: string | null;
+  multiplier?: number;
   fixtures: {
     home_team: { name: string; short_name: string };
     away_team: { name: string; short_name: string };
@@ -22,6 +25,7 @@ interface Pick {
 
 interface Player {
   user_id: string;
+  display_name?: string;
   profiles: { display_name: string } | null;
 }
 
@@ -42,6 +46,7 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
   const [sortBy, setSortBy] = useState<'player' | 'fixture' | 'pick' | 'result' | 'goals' | 'gameweek'>('gameweek');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [expandedGameweeks, setExpandedGameweeks] = useState<Set<number>>(new Set());
+  const [selectedPlayer, setSelectedPlayer] = useState<string>('all');
 
   // Group picks by gameweek
   const picksByGameweek = allPicks.reduce((acc, pick) => {
@@ -55,19 +60,23 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
     .map(Number)
     .sort((a, b) => b - a);
 
-  // Flatten all picks for comprehensive view
+  // Flatten all picks for comprehensive view with goals calculation
   const allPicksFlattened = useMemo(() => {
     return allPicks.map(pick => ({
       ...pick,
       goals: pick.result === 'win' && pick.fixtures?.is_completed 
-        ? (pick.picked_side === 'home' ? pick.fixtures.home_score : pick.fixtures.away_score) || 0
+        ? ((pick.picked_side === 'home' ? pick.fixtures.home_score : pick.fixtures.away_score) || 0) * (pick.multiplier || 1)
         : 0
     }));
   }, [allPicks]);
 
-  // Sort all picks based on current sort criteria
+  // Filter and sort all picks based on current criteria
   const sortedAllPicks = useMemo(() => {
-    const sorted = [...allPicksFlattened].sort((a, b) => {
+    const filtered = selectedPlayer === 'all' 
+      ? allPicksFlattened 
+      : allPicksFlattened.filter(pick => pick.user_id === selectedPlayer);
+    
+    const sorted = [...filtered].sort((a, b) => {
       let compareValue = 0;
       
       switch (sortBy) {
@@ -99,7 +108,7 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
       return sortOrder === 'asc' ? compareValue : -compareValue;
     });
     return sorted;
-  }, [allPicksFlattened, sortBy, sortOrder]);
+  }, [allPicksFlattened, sortBy, sortOrder, selectedPlayer]);
 
   const handleSort = (column: typeof sortBy) => {
     if (sortBy === column) {
@@ -138,10 +147,34 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
       {/* Comprehensive All Picks View */}
       <Card>
         <CardHeader>
-          <CardTitle>All Picks Overview</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Complete pick history with sortable columns - see what teams each player has already used
-          </p>
+          <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+            <div>
+              <CardTitle>All Picks Overview</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Complete pick history with sortable columns - see what teams each player has already used
+              </p>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Select value={selectedPlayer} onValueChange={setSelectedPlayer}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Filter by player" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Players</SelectItem>
+                   {players.map(player => (
+                     <SelectItem key={player.user_id} value={player.user_id}>
+                       {player.profiles?.display_name || player.display_name}
+                     </SelectItem>
+                   ))}
+                </SelectContent>
+              </Select>
+              {selectedPlayer !== 'all' && (
+                <Button variant="outline" size="sm" onClick={() => setSelectedPlayer('all')}>
+                  Clear Filter
+                </Button>
+              )}
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -407,20 +440,20 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
                               <Badge variant="outline">Hidden</Badge>
                             )}
                           </TableCell>
-                          <TableCell>
-                            {shouldShowPickDetails && pick.result === 'win' && pick.fixtures?.is_completed ? (
-                              <div className="flex items-center gap-2">
-                                <span className="text-lg font-bold text-primary">
-                                  {pick.picked_side === 'home' 
-                                    ? pick.fixtures.home_score 
-                                    : pick.fixtures.away_score}
-                                </span>
-                                <Target className="h-4 w-4 text-muted-foreground" />
-                              </div>
-                            ) : (
-                              <span className="text-muted-foreground">-</span>
-                            )}
-                          </TableCell>
+                           <TableCell>
+                             {shouldShowPickDetails && pick.result === 'win' && pick.fixtures?.is_completed ? (
+                               <div className="flex items-center gap-2">
+                                 <span className="text-lg font-bold text-primary">
+                                   {((pick.picked_side === 'home' 
+                                     ? pick.fixtures.home_score 
+                                     : pick.fixtures.away_score) || 0) * (pick.multiplier || 1)}
+                                 </span>
+                                 <Target className="h-4 w-4 text-muted-foreground" />
+                               </div>
+                             ) : (
+                               <span className="text-muted-foreground">-</span>
+                             )}
+                           </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

@@ -314,19 +314,20 @@ const GameDetail = () => {
                   )}
                   
                   {myParticipation && !myParticipation.is_eliminated && game.status === "active" && (
-                    <>
-                      <Link to={`/games/${gameId}/pick`}>
-                        <Button className="w-full">
-                          <Play size={16} className="mr-2" />
-                          Make Pick for GW {game.current_gameweek}
-                        </Button>
-                      </Link>
-                      <Link to={`/games/${gameId}/progress`}>
-                        <Button variant="outline" className="w-full">
-                          View Progress
-                        </Button>
-                      </Link>
-                    </>
+                    <Link to={`/games/${gameId}/pick`}>
+                      <Button className="w-full">
+                        <Play size={16} className="mr-2" />
+                        Make Pick for GW {game.current_gameweek}
+                      </Button>
+                    </Link>
+                  )}
+                  
+                  {myParticipation && (
+                    <Link to={`/games/${gameId}/progress`}>
+                      <Button variant="outline" className="w-full">
+                        View Progress
+                      </Button>
+                    </Link>
                   )}
                   
                   {myParticipation && myParticipation.is_eliminated && (

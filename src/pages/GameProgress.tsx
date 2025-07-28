@@ -160,7 +160,7 @@ export default function GameProgress() {
           const goals = pick.picked_side === 'home' 
             ? pick.fixtures.home_score || 0
             : pick.fixtures.away_score || 0;
-          return sum + goals;
+          return sum + (goals * pick.multiplier);
         }
         return sum;
       }, 0);

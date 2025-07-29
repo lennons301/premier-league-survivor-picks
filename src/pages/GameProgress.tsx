@@ -156,11 +156,24 @@ export default function GameProgress() {
       const currentGameweekPick = userPicks.find(pick => pick.gameweek === game?.current_gameweek);
       
       const cumulativeGoals = userPicks.reduce((sum, pick) => {
+        console.log('🔍 Pick debug:', {
+          user: player.profiles?.display_name,
+          gameweek: pick.gameweek,
+          result: pick.result,
+          completed: pick.fixtures?.is_completed,
+          homeScore: pick.fixtures?.home_score,
+          awayScore: pick.fixtures?.away_score,
+          pickedSide: pick.picked_side,
+          multiplier: pick.multiplier
+        });
+        
         if (pick.result === 'win' && pick.fixtures?.is_completed) {
           const goals = pick.picked_side === 'home' 
             ? pick.fixtures.home_score || 0
             : pick.fixtures.away_score || 0;
-          return sum + (goals * (pick.multiplier || 1));
+          const goalCount = goals * (pick.multiplier || 1);
+          console.log('✅ Adding goals:', goalCount, 'for', player.profiles?.display_name);
+          return sum + goalCount;
         }
         return sum;
       }, 0);

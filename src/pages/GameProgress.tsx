@@ -5,16 +5,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Trophy, Users, Target, ChevronDown, ChevronUp, Check, X, Clock, Lock } from "lucide-react";
-import { useState, useMemo } from "react";
+import { ArrowLeft, Trophy, Users, Clock, Lock } from "lucide-react";
 import PickHistory from "@/components/PickHistory";
 
 export default function GameProgress() {
   const { gameId } = useParams<{ gameId: string }>();
   const { user } = useAuth();
-  const [sortBy, setSortBy] = useState<'name' | 'goals' | 'status'>('goals');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   // Fetch game details
   const { data: game } = useQuery({
@@ -143,81 +139,9 @@ export default function GameProgress() {
     },
   });
 
-  // Calculate statistics and user progress
+  // Calculate statistics
   const activePlayers = players?.filter(p => !p.is_eliminated) || [];
   const eliminatedPlayers = players?.filter(p => p.is_eliminated) || [];
-  
-  // Calculate cumulative goals per user
-  const userProgress = useMemo(() => {
-    if (!players || !allPicks) return [];
-    
-    return players.map(player => {
-      const userPicks = allPicks.filter(pick => pick.user_id === player.user_id);
-      const currentGameweekPick = userPicks.find(pick => pick.gameweek === game?.current_gameweek);
-      
-      const cumulativeGoals = userPicks.reduce((sum, pick) => {
-        console.log('🔍 Pick debug:', {
-          user: player.profiles?.display_name,
-          gameweek: pick.gameweek,
-          result: pick.result,
-          completed: pick.fixtures?.is_completed,
-          homeScore: pick.fixtures?.home_score,
-          awayScore: pick.fixtures?.away_score,
-          pickedSide: pick.picked_side,
-          multiplier: pick.multiplier
-        });
-        
-        if (pick.fixtures?.is_completed && pick.fixtures.home_score !== null && pick.fixtures.away_score !== null) {
-          // Check if this pick resulted in elimination
-          const isEliminating = pick.result === 'lose' && pick.gameweek > (game?.starting_gameweek || 1);
-          
-          if (!isEliminating) {
-            const goals = pick.picked_side === 'home' 
-              ? pick.fixtures.home_score || 0
-              : pick.fixtures.away_score || 0;
-            const goalCount = goals * (pick.multiplier || 1);
-            console.log('✅ Adding goals:', goalCount, 'for', player.profiles?.display_name, 'result:', pick.result);
-            return sum + goalCount;
-          } else {
-            console.log('❌ Skipping goals for eliminating pick:', player.profiles?.display_name);
-          }
-        }
-        return sum;
-      }, 0);
-      
-      const gameweekResults = userPicks.reduce((acc, pick) => {
-        if (!acc[pick.gameweek]) acc[pick.gameweek] = [];
-        acc[pick.gameweek].push(pick);
-        return acc;
-      }, {} as Record<number, typeof userPicks>);
-      
-      return {
-        ...player,
-        cumulativeGoals,
-        gameweekResults,
-        totalPicks: userPicks.length,
-        winningPicks: userPicks.filter(p => p.result === 'win').length,
-        hasCurrentGameweekPick: !!currentGameweekPick,
-        currentGameweekPick: currentGameweekPick
-      };
-    });
-  }, [players, allPicks, game?.current_gameweek]);
-
-  // Sort users
-  const sortedUsers = useMemo(() => {
-    const sorted = [...userProgress].sort((a, b) => {
-      let compareValue = 0;
-      if (sortBy === 'name') {
-        compareValue = (a.profiles?.display_name || '').localeCompare(b.profiles?.display_name || '');
-      } else if (sortBy === 'goals') {
-        compareValue = a.cumulativeGoals - b.cumulativeGoals;
-      } else if (sortBy === 'status') {
-        compareValue = Number(a.is_eliminated) - Number(b.is_eliminated);
-      }
-      return sortOrder === 'asc' ? compareValue : -compareValue;
-    });
-    return sorted;
-  }, [userProgress, sortBy, sortOrder]);
 
   
 
@@ -228,14 +152,6 @@ export default function GameProgress() {
   // Check if user is admin
   const isAdmin = user && game && game.created_by === user.id;
 
-  const handleSort = (column: 'name' | 'goals' | 'status') => {
-    if (sortBy === column) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortBy(column);
-      setSortOrder(column === 'goals' ? 'desc' : 'asc');
-    }
-  };
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -295,189 +211,6 @@ export default function GameProgress() {
         </Card>
       </div>
 
-      {/* User Progress Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Player Progress & Standings</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Cumulative goals are used as tiebreakers when all players are eliminated
-          </p>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead 
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => handleSort('name')}
-                >
-                  <div className="flex items-center gap-2">
-                    Player
-                    {sortBy === 'name' && (
-                      sortOrder === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                    )}
-                  </div>
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => handleSort('status')}
-                >
-                  <div className="flex items-center gap-2">
-                    Status
-                    {sortBy === 'status' && (
-                      sortOrder === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                    )}
-                  </div>
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => handleSort('goals')}
-                >
-                  <div className="flex items-center gap-2">
-                    Cumulative Goals
-                    {sortBy === 'goals' && (
-                      sortOrder === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                    )}
-                  </div>
-                </TableHead>
-                <TableHead>Record</TableHead>
-                {gameGameweek?.status === 'open' && (
-                  <TableHead>GW{game.current_gameweek} Pick Status</TableHead>
-                )}
-                {gameGameweek?.status === 'active' && (
-                  <TableHead>GW{game.current_gameweek} Pick</TableHead>
-                )}
-                <TableHead>Recent Gameweeks</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sortedUsers.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell className="font-medium">
-                    {user.profiles?.display_name}
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={user.is_eliminated ? "destructive" : "secondary"}
-                      className={user.is_eliminated ? "" : "bg-green-100 text-green-800"}
-                    >
-                      {user.is_eliminated 
-                        ? `Eliminated (GW${user.eliminated_gameweek})`
-                        : "Active"
-                      }
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xl font-bold text-primary">
-                        {user.cumulativeGoals}
-                      </span>
-                      <Target className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm">
-                      <span className="text-green-600 font-medium">{user.winningPicks}W</span>
-                      <span className="text-muted-foreground mx-1">-</span>
-                      <span className="text-red-600 font-medium">{user.totalPicks - user.winningPicks}L</span>
-                      <div className="text-xs text-muted-foreground">
-                        {user.totalPicks} total picks
-                      </div>
-                    </div>
-                  </TableCell>
-                  {gameGameweek?.status === 'open' && (
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {user.hasCurrentGameweekPick ? (
-                          <div className="flex items-center gap-1 text-green-600">
-                            <Check className="h-4 w-4" />
-                            <span className="text-sm font-medium">Picked</span>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-1 text-red-600">
-                            <X className="h-4 w-4" />
-                            <span className="text-sm font-medium">Not Picked</span>
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                  )}
-                  {gameGameweek?.status === 'active' && (
-                    <TableCell>
-                      {user.currentGameweekPick ? (
-                        <div className="text-sm">
-                          <div className="font-medium">
-                            {user.currentGameweekPick.fixtures?.home_team?.short_name} vs {user.currentGameweekPick.fixtures?.away_team?.short_name}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            Picked: {user.currentGameweekPick.picked_side === 'home' 
-                              ? user.currentGameweekPick.fixtures?.home_team?.short_name 
-                              : user.currentGameweekPick.fixtures?.away_team?.short_name}
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground text-sm">No pick</span>
-                      )}
-                    </TableCell>
-                  )}
-                  <TableCell>
-                    <div className="flex gap-1">
-                      {Object.entries(user.gameweekResults)
-                        .sort(([a], [b]) => Number(b) - Number(a))
-                         .slice(0, 5)
-                         .map(([gameweek, picks]) => {
-                           const pick = picks[0]; // One pick per gameweek
-                           const isCurrentGameweek = Number(gameweek) === game?.current_gameweek;
-                           const shouldShowPick = gameGameweek?.picks_visible || !isCurrentGameweek;
-                           
-                           return (
-                             <div
-                               key={gameweek}
-                               title={
-                                 shouldShowPick 
-                                   ? `GW${gameweek}: ${pick?.result || 'pending'} ${
-                                       pick?.result === 'win' && pick?.fixtures?.is_completed
-                                         ? `(${pick.picked_side === 'home' 
-                                             ? pick.fixtures.home_score 
-                                             : pick.fixtures.away_score} goals)`
-                                         : ''
-                                     }`
-                                   : `GW${gameweek}: Pick hidden until gameweek is active`
-                               }
-                               className={`w-8 h-8 rounded text-xs flex items-center justify-center font-medium ${
-                                 !shouldShowPick && isCurrentGameweek
-                                   ? 'bg-gray-200 text-gray-500'
-                                   : pick?.result === 'win' 
-                                   ? 'bg-green-100 text-green-800' 
-                                   : pick?.result === 'lose' || pick?.result === 'draw'
-                                   ? 'bg-red-100 text-red-800'
-                                   : 'bg-gray-100 text-gray-600'
-                               }`}
-                             >
-                               {!shouldShowPick && isCurrentGameweek
-                                 ? '?'
-                                 : pick?.result === 'win' && pick?.fixtures?.is_completed
-                                 ? pick.picked_side === 'home' 
-                                   ? pick.fixtures.home_score 
-                                   : pick.fixtures.away_score
-                                 : pick?.result === 'lose' 
-                                 ? 'L'
-                                 : pick?.result === 'draw'
-                                 ? 'D'
-                                 : '?'
-                               }
-                             </div>
-                           );
-                         })
-                      }
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
 
       {/* Pick History */}
       <PickHistory 
@@ -485,6 +218,9 @@ export default function GameProgress() {
         players={players || []} 
         currentGameweek={game.current_gameweek || 1}
         gameGameweeks={allGameGameweeks || []}
+        gamePlayers={players || []}
+        game={game}
+        gameGameweek={gameGameweek}
       />
     </div>
   );

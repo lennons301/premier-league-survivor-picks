@@ -115,7 +115,9 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
   const pivotData = useMemo(() => {
     if (!gameGameweeks || !allPicks || !players) return [];
     
+    // Only show gameweeks up to current active week
     const gameweekNumbers = gameGameweeks
+      .filter(gg => gg.gameweek_number <= currentGameweek)
       .map(gg => gg.gameweek_number)
       .sort((a, b) => a - b);
     
@@ -407,8 +409,8 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
                   <TableHeader>
                     <TableRow>
                       <TableHead className="sticky left-0 bg-background min-w-32">Player</TableHead>
-                      <TableHead className="sticky left-32 bg-background min-w-24">Total Goals</TableHead>
-                      {gameGameweeks?.sort((a, b) => a.gameweek_number - b.gameweek_number).map(gg => (
+                      <TableHead className="sticky left-32 bg-background min-w-24 cursor-pointer hover:bg-muted/50">Total Goals</TableHead>
+                      {gameGameweeks?.filter(gg => gg.gameweek_number <= currentGameweek).sort((a, b) => a.gameweek_number - b.gameweek_number).map(gg => (
                         <TableHead key={gg.gameweek_number} className="text-center min-w-32">
                           GW {gg.gameweek_number}
                         </TableHead>
@@ -424,7 +426,7 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
                         <TableCell className="sticky left-32 bg-background font-semibold text-green-600">
                           {userData.totalGoals}
                         </TableCell>
-                        {gameGameweeks?.sort((a, b) => a.gameweek_number - b.gameweek_number).map(gg => {
+                        {gameGameweeks?.filter(gg => gg.gameweek_number <= currentGameweek).sort((a, b) => a.gameweek_number - b.gameweek_number).map(gg => {
                           const pick = userData.gameweekData[gg.gameweek_number];
                           const gameGameweek = gameGameweeks.find(g => g.gameweek_number === gg.gameweek_number);
                           const shouldShowPickDetails = gameGameweek?.status === 'active' || gameGameweek?.status === 'finished';

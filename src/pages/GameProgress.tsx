@@ -5,14 +5,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Trophy, Users, Clock, Lock } from "lucide-react";
+import { ArrowLeft, Trophy, Users, Clock, Lock, Crown, Banknote } from "lucide-react";
 import PickHistory from "@/components/PickHistory";
 
 export default function GameProgress() {
   const { gameId } = useParams<{ gameId: string }>();
   const { user } = useAuth();
 
-  // Fetch game details
+  // Fetch game details with prize pot
   const { data: game } = useQuery({
     queryKey: ["game", gameId],
     queryFn: async () => {
@@ -22,7 +22,27 @@ export default function GameProgress() {
         .eq("id", gameId)
         .single();
       if (error) throw error;
-      return data;
+
+      // Get prize pot
+      const { data: prizePot } = await supabase
+        .rpc("calculate_prize_pot", { p_game_id: gameId });
+
+      // Get winner if game is finished
+      let winner = null;
+      if (data.status === 'finished' && (data as any).winner_id) {
+        const { data: winnerProfile } = await supabase
+          .from("profiles")
+          .select("display_name")
+          .eq("user_id", (data as any).winner_id)
+          .single();
+        winner = winnerProfile;
+      }
+
+      return { 
+        ...data, 
+        prize_pot: prizePot,
+        winner: winner
+      };
     },
   });
 
@@ -182,7 +202,7 @@ export default function GameProgress() {
       </div>
 
       {/* Game Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Players</CardTitle>
@@ -196,7 +216,6 @@ export default function GameProgress() {
           </CardContent>
         </Card>
 
-
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Game Status</CardTitle>
@@ -209,6 +228,34 @@ export default function GameProgress() {
             </p>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Prize Pot</CardTitle>
+            <Banknote className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">£{game.prize_pot ? Number(game.prize_pot).toFixed(2) : '0.00'}</div>
+            <p className="text-xs text-muted-foreground">
+              £10 entry + rebuys
+            </p>
+          </CardContent>
+        </Card>
+
+        {game.status === 'finished' && game.winner && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Winner</CardTitle>
+              <Crown className="h-4 w-4 text-yellow-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-yellow-600">{game.winner.display_name}</div>
+              <p className="text-xs text-muted-foreground">
+                Congratulations!
+              </p>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
 

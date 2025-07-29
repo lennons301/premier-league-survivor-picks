@@ -187,36 +187,42 @@ export type Database = {
           created_by: string
           current_deadline: string | null
           current_gameweek: number | null
+          entry_fee: number
           id: string
           max_players: number | null
           name: string
           starting_gameweek: number | null
           status: string
           updated_at: string
+          winner_id: string | null
         }
         Insert: {
           created_at?: string
           created_by: string
           current_deadline?: string | null
           current_gameweek?: number | null
+          entry_fee?: number
           id?: string
           max_players?: number | null
           name: string
           starting_gameweek?: number | null
           status?: string
           updated_at?: string
+          winner_id?: string | null
         }
         Update: {
           created_at?: string
           created_by?: string
           current_deadline?: string | null
           current_gameweek?: number | null
+          entry_fee?: number
           id?: string
           max_players?: number | null
           name?: string
           starting_gameweek?: number | null
           status?: string
           updated_at?: string
+          winner_id?: string | null
         }
         Relationships: []
       }

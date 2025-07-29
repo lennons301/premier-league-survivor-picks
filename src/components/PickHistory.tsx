@@ -76,16 +76,6 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
           })()
         : 0;
       
-      console.log('📊 PickHistory goals calculation:', {
-        id: pick.id,
-        result: pick.result,
-        completed: pick.fixtures?.is_completed,
-        homeScore: pick.fixtures?.home_score,
-        awayScore: pick.fixtures?.away_score,
-        pickedSide: pick.picked_side,
-        multiplier: pick.multiplier,
-        calculatedGoals: goals
-      });
       
       return {
         ...pick,

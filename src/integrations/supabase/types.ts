@@ -454,6 +454,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      calculate_prize_pot: {
+        Args: { p_game_id: string }
+        Returns: number
+      }
       check_all_picks_made: {
         Args: { p_game_id: string; p_gameweek_number: number }
         Returns: boolean

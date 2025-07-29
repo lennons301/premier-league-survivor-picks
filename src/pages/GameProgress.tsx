@@ -167,14 +167,20 @@ export default function GameProgress() {
           multiplier: pick.multiplier
         });
         
-        if ((pick.result === 'win' || pick.result === 'draw') && pick.fixtures && 
-            (pick.fixtures.home_score !== null && pick.fixtures.away_score !== null)) {
-          const goals = pick.picked_side === 'home' 
-            ? pick.fixtures.home_score || 0
-            : pick.fixtures.away_score || 0;
-          const goalCount = goals * (pick.multiplier || 1);
-          console.log('✅ Adding goals:', goalCount, 'for', player.profiles?.display_name);
-          return sum + goalCount;
+        if (pick.fixtures?.is_completed && pick.fixtures.home_score !== null && pick.fixtures.away_score !== null) {
+          // Check if this pick resulted in elimination
+          const isEliminating = pick.result === 'lose' && pick.gameweek > (game?.starting_gameweek || 1);
+          
+          if (!isEliminating) {
+            const goals = pick.picked_side === 'home' 
+              ? pick.fixtures.home_score || 0
+              : pick.fixtures.away_score || 0;
+            const goalCount = goals * (pick.multiplier || 1);
+            console.log('✅ Adding goals:', goalCount, 'for', player.profiles?.display_name, 'result:', pick.result);
+            return sum + goalCount;
+          } else {
+            console.log('❌ Skipping goals for eliminating pick:', player.profiles?.display_name);
+          }
         }
         return sum;
       }, 0);

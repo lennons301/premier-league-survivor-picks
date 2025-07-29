@@ -64,9 +64,14 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
   // Flatten all picks for comprehensive view with goals calculation
   const allPicksFlattened = useMemo(() => {
     return allPicks.map(pick => {
-      const goals = (pick.result === 'win' || pick.result === 'draw') && pick.fixtures && 
-        (pick.fixtures.home_score !== null && pick.fixtures.away_score !== null)
-        ? ((pick.picked_side === 'home' ? pick.fixtures.home_score : pick.fixtures.away_score) || 0) * (pick.multiplier || 1)
+      const goals = pick.fixtures?.is_completed && pick.fixtures.home_score !== null && pick.fixtures.away_score !== null
+        ? (() => {
+            // Check if this pick resulted in elimination (lose after starting gameweek)
+            const isEliminating = pick.result === 'lose' && pick.gameweek > 1; // Assuming starting gameweek is 1
+            if (isEliminating) return 0;
+            
+            return ((pick.picked_side === 'home' ? pick.fixtures.home_score : pick.fixtures.away_score) || 0) * (pick.multiplier || 1);
+          })()
         : 0;
       
       console.log('📊 PickHistory goals calculation:', {

@@ -167,7 +167,7 @@ export default function GameProgress() {
           multiplier: pick.multiplier
         });
         
-        if (pick.result === 'win' && pick.fixtures?.is_completed) {
+        if ((pick.result === 'win' || pick.result === 'draw') && pick.fixtures?.is_completed) {
           const goals = pick.picked_side === 'home' 
             ? pick.fixtures.home_score || 0
             : pick.fixtures.away_score || 0;

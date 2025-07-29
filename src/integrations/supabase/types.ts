@@ -472,6 +472,10 @@ export type Database = {
         Args: { p_gameweek_number: number }
         Returns: undefined
       }
+      get_game_winner: {
+        Args: { p_game_id: string }
+        Returns: string
+      }
       is_game_admin: {
         Args: { game_id: string }
         Returns: boolean

@@ -89,13 +89,17 @@ const Games = () => {
 
           // Get winner if game is finished
           let winner = null;
-          if (game.status === 'finished' && (game as any).winner_id) {
-            const { data: winnerProfile } = await supabase
-              .from("profiles")
-              .select("display_name")
-              .eq("user_id", (game as any).winner_id)
-              .single();
-            winner = winnerProfile;
+          if (game.status === 'finished') {
+            const { data: winnerUserId } = await supabase
+              .rpc("get_game_winner", { p_game_id: game.id });
+            if (winnerUserId) {
+              const { data: winnerProfile } = await supabase
+                .from("profiles")
+                .select("display_name")
+                .eq("user_id", winnerUserId)
+                .single();
+              winner = winnerProfile;
+            }
           }
           
           return { 
@@ -133,13 +137,17 @@ const Games = () => {
 
           // Get winner if game is finished
           let winner = null;
-          if (gamePlayer.games.status === 'finished' && (gamePlayer.games as any).winner_id) {
-            const { data: winnerProfile } = await supabase
-              .from("profiles")
-              .select("display_name")
-              .eq("user_id", (gamePlayer.games as any).winner_id)
-              .single();
-            winner = winnerProfile;
+          if (gamePlayer.games.status === 'finished') {
+            const { data: winnerUserId } = await supabase
+              .rpc("get_game_winner", { p_game_id: gamePlayer.games.id });
+            if (winnerUserId) {
+              const { data: winnerProfile } = await supabase
+                .from("profiles")
+                .select("display_name")
+                .eq("user_id", winnerUserId)
+                .single();
+              winner = winnerProfile;
+            }
           }
           
           return {

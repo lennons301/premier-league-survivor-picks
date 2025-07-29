@@ -29,13 +29,17 @@ export default function GameProgress() {
 
       // Get winner if game is finished
       let winner = null;
-      if (data.status === 'finished' && (data as any).winner_id) {
-        const { data: winnerProfile } = await supabase
-          .from("profiles")
-          .select("display_name")
-          .eq("user_id", (data as any).winner_id)
-          .single();
-        winner = winnerProfile;
+      if (data.status === 'finished') {
+        const { data: winnerUserId } = await supabase
+          .rpc("get_game_winner", { p_game_id: gameId });
+        if (winnerUserId) {
+          const { data: winnerProfile } = await supabase
+            .from("profiles")
+            .select("display_name")
+            .eq("user_id", winnerUserId)
+            .single();
+          winner = winnerProfile;
+        }
       }
 
       return { 

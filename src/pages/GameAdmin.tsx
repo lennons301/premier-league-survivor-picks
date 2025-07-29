@@ -678,7 +678,7 @@ const GameAdmin = () => {
                         <CheckCircle className="h-4 w-4" />
                         Process Results
                       </Button>
-                      {gameGameweek?.status === 'open' && (
+                      {(gameGameweek?.status === 'open' || gameGameweek?.status === 'upcoming') && (
                         <Button
                           variant="default"
                           size="sm"

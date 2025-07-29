@@ -188,7 +188,10 @@ const GameDetail = () => {
   const activePlayers = players?.filter(p => !p.is_eliminated) || [];
   const eliminatedPlayers = players?.filter(p => p.is_eliminated) || [];
   const isGameCreator = user && game && user.id === game.created_by;
-  const canJoin = user && !myParticipation && (game?.status === "active" || isGameCreator);
+  const canJoin = user && !myParticipation && (
+    (game?.status === "active" && game?.current_gameweek === game?.starting_gameweek) || 
+    isGameCreator
+  );
 
   if (isLoading) {
     return (

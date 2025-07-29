@@ -47,6 +47,7 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [expandedGameweeks, setExpandedGameweeks] = useState<Set<number>>(new Set());
   const [selectedPlayer, setSelectedPlayer] = useState<string>('all');
+  const [viewMode, setViewMode] = useState<'overview' | 'pivot'>('overview');
 
   // Group picks by gameweek
   const picksByGameweek = allPicks.reduce((acc, pick) => {
@@ -110,6 +111,43 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
     return sorted;
   }, [allPicksFlattened, sortBy, sortOrder, selectedPlayer]);
 
+  // Create pivot table data - gameweeks as columns, users as rows
+  const pivotData = useMemo(() => {
+    if (!gameGameweeks || !allPicks || !players) return [];
+    
+    const gameweekNumbers = gameGameweeks
+      .map(gg => gg.gameweek_number)
+      .sort((a, b) => a - b);
+    
+    const uniqueUsers = [...new Set(allPicks.map(pick => pick.user_id))];
+    
+    return uniqueUsers.map(userId => {
+      const userProfile = players.find(p => p.user_id === userId);
+      const userPicks = allPicks.filter(pick => pick.user_id === userId);
+      
+      const gameweekData: Record<number, any> = {};
+      gameweekNumbers.forEach(gw => {
+        const pick = userPicks.find(p => p.gameweek === gw);
+        gameweekData[gw] = pick;
+      });
+      
+      return {
+        userId,
+        displayName: userProfile?.profiles?.display_name || userProfile?.display_name || 'Unknown',
+        gameweekData,
+        totalGoals: userPicks.reduce((sum, pick) => {
+          if (pick.result === 'win' && pick.fixtures?.is_completed) {
+            const goals = pick.picked_side === 'home' 
+              ? pick.fixtures.home_score || 0
+              : pick.fixtures.away_score || 0;
+            return sum + (goals * (pick.multiplier || 1));
+          }
+          return sum;
+        }, 0)
+      };
+    });
+  }, [gameGameweeks, allPicks, players]);
+
   const handleSort = (column: typeof sortBy) => {
     if (sortBy === column) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
@@ -149,191 +187,286 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
         <CardHeader>
           <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
             <div>
-              <CardTitle>All Picks Overview</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Target className="h-5 w-5" />
+                Picks History
+              </CardTitle>
               <p className="text-sm text-muted-foreground">
-                Complete pick history with sortable columns - see what teams each player has already used
+                {viewMode === 'overview' 
+                  ? 'Complete pick history with sortable columns - see what teams each player has already used'
+                  : 'Pivot view showing all picks by gameweek with results colored by outcome'
+                }
               </p>
             </div>
-            <div className="flex items-center space-x-2">
-              <Select value={selectedPlayer} onValueChange={setSelectedPlayer}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Filter by player" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Players</SelectItem>
-                   {players.map(player => (
-                     <SelectItem key={player.user_id} value={player.user_id}>
-                       {player.profiles?.display_name || player.display_name}
-                     </SelectItem>
-                   ))}
-                </SelectContent>
-              </Select>
-              {selectedPlayer !== 'all' && (
-                <Button variant="outline" size="sm" onClick={() => setSelectedPlayer('all')}>
-                  Clear Filter
-                </Button>
-              )}
+            <div className="flex gap-2">
+              <Button
+                variant={viewMode === 'overview' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('overview')}
+              >
+                Overview
+              </Button>
+              <Button
+                variant={viewMode === 'pivot' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('pivot')}
+              >
+                Pivot Table
+              </Button>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead 
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => handleSort('gameweek')}
-                >
-                  <div className="flex items-center gap-2">
-                    Gameweek
-                    {sortBy === 'gameweek' && (
-                      sortOrder === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                    )}
-                  </div>
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => handleSort('player')}
-                >
-                  <div className="flex items-center gap-2">
-                    Player
-                    {sortBy === 'player' && (
-                      sortOrder === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                    )}
-                  </div>
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => handleSort('fixture')}
-                >
-                  <div className="flex items-center gap-2">
-                    Fixture
-                    {sortBy === 'fixture' && (
-                      sortOrder === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                    )}
-                  </div>
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => handleSort('pick')}
-                >
-                  <div className="flex items-center gap-2">
-                    Pick
-                    {sortBy === 'pick' && (
-                      sortOrder === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                    )}
-                  </div>
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => handleSort('result')}
-                >
-                  <div className="flex items-center gap-2">
-                    Result
-                    {sortBy === 'result' && (
-                      sortOrder === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                    )}
-                  </div>
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => handleSort('goals')}
-                >
-                  <div className="flex items-center gap-2">
-                    Goals
-                    {sortBy === 'goals' && (
-                      sortOrder === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                    )}
-                  </div>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sortedAllPicks.map((pick) => {
-                const gameGameweek = gameGameweeks?.find(gg => gg.gameweek_number === pick.gameweek);
-                const shouldShowPickDetails = gameGameweek?.status === 'active' || gameGameweek?.status === 'finished';
-                
-                return (
-                  <TableRow key={pick.id}>
-                    <TableCell>
-                      <Badge variant="outline">GW{pick.gameweek}</Badge>
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {pick.profiles?.display_name}
-                    </TableCell>
-                    <TableCell>
-                      {pick.fixtures ? (
-                        <div className="text-sm">
-                          <div className="font-medium">
-                            {pick.fixtures.home_team.short_name} vs {pick.fixtures.away_team.short_name}
-                          </div>
-                          {pick.fixtures.is_completed && (
-                            <div className="text-xs text-muted-foreground">
-                              {pick.fixtures.home_score} - {pick.fixtures.away_score}
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">No fixture data</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {shouldShowPickDetails ? (
-                        <div className="text-sm">
-                          <span className="font-medium">
-                            {pick.picked_side === 'home' 
-                              ? pick.fixtures?.home_team.short_name 
-                              : pick.fixtures?.away_team.short_name}
-                          </span>
-                          <div className="text-xs text-muted-foreground">
-                            ({pick.picked_side})
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground text-sm">Pick hidden</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {shouldShowPickDetails ? (
-                        pick.result ? (
-                          <Badge 
-                            variant={
-                              pick.result === 'win' ? 'default' : 
-                              pick.result === 'draw' ? 'secondary' : 
-                              'destructive'
-                            }
-                            className={
-                              pick.result === 'win' ? 'bg-green-100 text-green-800' : ''
-                            }
-                          >
-                            {pick.result === 'win' ? 'Win' : 
-                             pick.result === 'draw' ? 'Draw' : 
-                             'Loss'}
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline">Pending</Badge>
-                        )
-                      ) : (
-                        <Badge variant="outline">Hidden</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {shouldShowPickDetails && pick.result === 'win' && pick.fixtures?.is_completed ? (
-                        <div className="flex items-center gap-2">
-                          <span className="text-lg font-bold text-primary">
-                            {pick.goals}
-                          </span>
-                          <Target className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
+          {viewMode === 'overview' ? (
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Select value={selectedPlayer} onValueChange={setSelectedPlayer}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Filter by player" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Players</SelectItem>
+                     {players.map(player => (
+                       <SelectItem key={player.user_id} value={player.user_id}>
+                         {player.profiles?.display_name || player.display_name}
+                       </SelectItem>
+                     ))}
+                  </SelectContent>
+                </Select>
+                {selectedPlayer !== 'all' && (
+                  <Button variant="outline" size="sm" onClick={() => setSelectedPlayer('all')}>
+                    Clear Filter
+                  </Button>
+                )}
+              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => handleSort('gameweek')}
+                    >
+                      <div className="flex items-center gap-2">
+                        Gameweek
+                        {sortBy === 'gameweek' && (
+                          sortOrder === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                        )}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => handleSort('player')}
+                    >
+                      <div className="flex items-center gap-2">
+                        Player
+                        {sortBy === 'player' && (
+                          sortOrder === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                        )}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => handleSort('fixture')}
+                    >
+                      <div className="flex items-center gap-2">
+                        Fixture
+                        {sortBy === 'fixture' && (
+                          sortOrder === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                        )}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => handleSort('pick')}
+                    >
+                      <div className="flex items-center gap-2">
+                        Pick
+                        {sortBy === 'pick' && (
+                          sortOrder === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                        )}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => handleSort('result')}
+                    >
+                      <div className="flex items-center gap-2">
+                        Result
+                        {sortBy === 'result' && (
+                          sortOrder === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                        )}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => handleSort('goals')}
+                    >
+                      <div className="flex items-center gap-2">
+                        Goals
+                        {sortBy === 'goals' && (
+                          sortOrder === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                        )}
+                      </div>
+                    </TableHead>
                   </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                </TableHeader>
+                <TableBody>
+                  {sortedAllPicks.map((pick) => {
+                    const gameGameweek = gameGameweeks?.find(gg => gg.gameweek_number === pick.gameweek);
+                    const shouldShowPickDetails = gameGameweek?.status === 'active' || gameGameweek?.status === 'finished';
+                    
+                    return (
+                      <TableRow key={pick.id}>
+                        <TableCell>
+                          <Badge variant="outline">GW{pick.gameweek}</Badge>
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {pick.profiles?.display_name}
+                        </TableCell>
+                        <TableCell>
+                          {pick.fixtures ? (
+                            <div className="text-sm">
+                              <div className="font-medium">
+                                {pick.fixtures.home_team.short_name} vs {pick.fixtures.away_team.short_name}
+                              </div>
+                              {pick.fixtures.is_completed && (
+                                <div className="text-xs text-muted-foreground">
+                                  {pick.fixtures.home_score} - {pick.fixtures.away_score}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">No fixture data</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {shouldShowPickDetails ? (
+                            <div className="text-sm">
+                              <span className="font-medium">
+                                {pick.picked_side === 'home' 
+                                  ? pick.fixtures?.home_team.short_name 
+                                  : pick.fixtures?.away_team.short_name}
+                              </span>
+                              <div className="text-xs text-muted-foreground">
+                                ({pick.picked_side})
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">Pick hidden</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {shouldShowPickDetails ? (
+                            pick.result ? (
+                              <Badge 
+                                variant={
+                                  pick.result === 'win' ? 'default' : 
+                                  pick.result === 'draw' ? 'secondary' : 
+                                  'destructive'
+                                }
+                                className={
+                                  pick.result === 'win' ? 'bg-green-100 text-green-800' : ''
+                                }
+                              >
+                                {pick.result === 'win' ? 'Win' : 
+                                 pick.result === 'draw' ? 'Draw' : 
+                                 'Loss'}
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline">Pending</Badge>
+                            )
+                          ) : (
+                            <Badge variant="outline">Hidden</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {shouldShowPickDetails && pick.result === 'win' && pick.fixtures?.is_completed ? (
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg font-bold text-primary">
+                                {pick.goals}
+                              </span>
+                              <Target className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="text-sm text-muted-foreground">
+                Pivot view showing all picks by gameweek. Results are color-coded: green (win), yellow (draw), red (loss), gray (pending).
+              </div>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="sticky left-0 bg-background min-w-32">Player</TableHead>
+                      <TableHead className="sticky left-32 bg-background min-w-24">Total Goals</TableHead>
+                      {gameGameweeks?.sort((a, b) => a.gameweek_number - b.gameweek_number).map(gg => (
+                        <TableHead key={gg.gameweek_number} className="text-center min-w-32">
+                          GW {gg.gameweek_number}
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {pivotData.sort((a, b) => b.totalGoals - a.totalGoals).map(userData => (
+                      <TableRow key={userData.userId}>
+                        <TableCell className="sticky left-0 bg-background font-medium">
+                          {userData.displayName}
+                        </TableCell>
+                        <TableCell className="sticky left-32 bg-background font-semibold text-green-600">
+                          {userData.totalGoals}
+                        </TableCell>
+                        {gameGameweeks?.sort((a, b) => a.gameweek_number - b.gameweek_number).map(gg => {
+                          const pick = userData.gameweekData[gg.gameweek_number];
+                          const gameGameweek = gameGameweeks.find(g => g.gameweek_number === gg.gameweek_number);
+                          const shouldShowPickDetails = gameGameweek?.status === 'active' || gameGameweek?.status === 'finished';
+                          
+                          return (
+                            <TableCell key={gg.gameweek_number} className="text-center">
+                              {pick ? (
+                                <div className={`p-2 rounded text-xs ${
+                                  !shouldShowPickDetails ? 'bg-gray-100 text-gray-600' :
+                                  pick.result === 'win' ? 'bg-green-100 text-green-800' :
+                                  pick.result === 'loss' ? 'bg-red-100 text-red-800' :
+                                  pick.result === 'draw' ? 'bg-yellow-100 text-yellow-800' :
+                                  'bg-gray-100 text-gray-600'
+                                }`}>
+                                  <div className="font-medium">
+                                    {shouldShowPickDetails ? (
+                                      pick.picked_side === 'home' 
+                                        ? pick.fixtures?.home_team?.short_name 
+                                        : pick.fixtures?.away_team?.short_name
+                                    ) : (
+                                      'Hidden'
+                                    )}
+                                  </div>
+                                  {shouldShowPickDetails && pick.result === 'win' && pick.fixtures?.is_completed && (
+                                    <div className="font-bold">
+                                      {(pick.picked_side === 'home' ? pick.fixtures.home_score : pick.fixtures.away_score) * (pick.multiplier || 1)}
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-gray-400">-</span>
+                              )}
+                            </TableCell>
+                          );
+                        })}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

@@ -257,7 +257,7 @@ const Games = () => {
                           View Details
                         </Button>
                       </Link>
-                      {game.status === "active" && (
+                      {game.status === "active" && game.current_gameweek === game.starting_gameweek && (
                         <JoinGameButton gameId={game.id} />
                       )}
                     </div>

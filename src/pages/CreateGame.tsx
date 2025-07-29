@@ -167,7 +167,7 @@ const CreateGame = () => {
                     <FormItem>
                       <FormLabel>Game Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., Premier League LMS 2024/25" {...field} />
+                        <Input placeholder="e.g., Premier League LPS 2024/25" {...field} />
                       </FormControl>
                       <FormDescription>
                         Choose a descriptive name for your competition

@@ -12,7 +12,7 @@ const Navbar = () => {
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
           <Shield className="text-primary" size={24} />
-          <span className="text-xl font-bold">LMS</span>
+          <span className="text-xl font-bold">LPS</span>
         </Link>
 
         <div className="flex items-center gap-4">

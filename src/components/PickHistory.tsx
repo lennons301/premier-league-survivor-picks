@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Target, ChevronDown, ChevronUp } from "lucide-react";
+import { Target, ChevronDown, ChevronUp, ArrowUpDown } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -48,6 +48,8 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
   const [expandedGameweeks, setExpandedGameweeks] = useState<Set<number>>(new Set());
   const [selectedPlayer, setSelectedPlayer] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'overview' | 'pivot'>('overview');
+  const [pivotSortBy, setPivotSortBy] = useState<'name' | 'total' | number>('total');
+  const [pivotSortOrder, setPivotSortOrder] = useState<'asc' | 'desc'>('desc');
 
   // Group picks by gameweek
   const picksByGameweek = allPicks.reduce((acc, pick) => {
@@ -189,6 +191,41 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
     }
     setExpandedGameweeks(newExpanded);
   };
+
+  const handlePivotSort = (column: 'name' | 'total' | number) => {
+    if (pivotSortBy === column) {
+      setPivotSortOrder(pivotSortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setPivotSortBy(column);
+      setPivotSortOrder(column === 'name' ? 'asc' : 'desc');
+    }
+  };
+
+  // Sort pivot data
+  const sortedPivotData = useMemo(() => {
+    return [...pivotData].sort((a, b) => {
+      let compareValue = 0;
+      
+      if (pivotSortBy === 'name') {
+        compareValue = a.displayName.localeCompare(b.displayName);
+      } else if (pivotSortBy === 'total') {
+        compareValue = a.totalGoals - b.totalGoals;
+      } else if (typeof pivotSortBy === 'number') {
+        // Sort by specific gameweek goals
+        const aPick = a.gameweekData[pivotSortBy];
+        const bPick = b.gameweekData[pivotSortBy];
+        const aGoals = aPick && aPick.result === 'win' && aPick.fixtures?.is_completed 
+          ? ((aPick.picked_side === 'home' ? aPick.fixtures.home_score : aPick.fixtures.away_score) || 0) * (aPick.multiplier || 1)
+          : 0;
+        const bGoals = bPick && bPick.result === 'win' && bPick.fixtures?.is_completed 
+          ? ((bPick.picked_side === 'home' ? bPick.fixtures.home_score : bPick.fixtures.away_score) || 0) * (bPick.multiplier || 1)
+          : 0;
+        compareValue = aGoals - bGoals;
+      }
+      
+      return pivotSortOrder === 'asc' ? compareValue : -compareValue;
+    });
+  }, [pivotData, pivotSortBy, pivotSortOrder]);
 
   if (gameweeks.length === 0) {
     return (
@@ -429,17 +466,49 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="sticky left-0 bg-background min-w-32">Player</TableHead>
-                      <TableHead className="sticky left-32 bg-background min-w-24 cursor-pointer hover:bg-muted/50">Total Goals</TableHead>
+                      <TableHead 
+                        className="sticky left-0 bg-background min-w-32 cursor-pointer hover:bg-muted/50"
+                        onClick={() => handlePivotSort('name')}
+                      >
+                        <div className="flex items-center gap-2">
+                          Player
+                          {pivotSortBy === 'name' && (
+                            pivotSortOrder === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                          )}
+                          {pivotSortBy !== 'name' && <ArrowUpDown className="h-4 w-4 opacity-50" />}
+                        </div>
+                      </TableHead>
+                      <TableHead 
+                        className="sticky left-32 bg-background min-w-24 cursor-pointer hover:bg-muted/50"
+                        onClick={() => handlePivotSort('total')}
+                      >
+                        <div className="flex items-center gap-2">
+                          Total Goals
+                          {pivotSortBy === 'total' && (
+                            pivotSortOrder === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                          )}
+                          {pivotSortBy !== 'total' && <ArrowUpDown className="h-4 w-4 opacity-50" />}
+                        </div>
+                      </TableHead>
                       {gameGameweeks?.filter(gg => gg.gameweek_number <= currentGameweek).sort((a, b) => a.gameweek_number - b.gameweek_number).map(gg => (
-                        <TableHead key={gg.gameweek_number} className="text-center min-w-32">
-                          GW {gg.gameweek_number}
+                        <TableHead 
+                          key={gg.gameweek_number} 
+                          className="text-center min-w-32 cursor-pointer hover:bg-muted/50"
+                          onClick={() => handlePivotSort(gg.gameweek_number)}
+                        >
+                          <div className="flex items-center justify-center gap-1">
+                            GW {gg.gameweek_number}
+                            {pivotSortBy === gg.gameweek_number && (
+                              pivotSortOrder === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                            )}
+                            {pivotSortBy !== gg.gameweek_number && <ArrowUpDown className="h-3 w-3 opacity-50" />}
+                          </div>
                         </TableHead>
                       ))}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {pivotData.sort((a, b) => b.totalGoals - a.totalGoals).map(userData => (
+                    {sortedPivotData.map(userData => (
                       <TableRow key={userData.userId}>
                         <TableCell className="sticky left-0 bg-background font-medium">
                           {userData.displayName}

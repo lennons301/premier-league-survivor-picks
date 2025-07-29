@@ -399,7 +399,9 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
                                     w-16 h-12 rounded flex flex-col items-center justify-center text-xs font-bold mx-auto p-1
                                     ${pick.result === 'win' ? 'bg-green-500 text-white' :
                                       pick.result === 'lose' ? 'bg-red-500 text-white' :
-                                      'bg-yellow-500 text-white'
+                                      pick.result === 'draw' ? 'bg-blue-500 text-white' :
+                                      pick.fixtures?.is_completed ? 'bg-yellow-500 text-white' :
+                                      'bg-gray-400 text-white'
                                     }
                                   `}
                                   title={`${pick.picked_side === 'home' ? pick.fixtures?.home_team?.short_name : pick.fixtures?.away_team?.short_name} vs ${pick.opponent} - ${pick.result}`}

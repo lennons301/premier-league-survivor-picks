@@ -47,7 +47,7 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [expandedGameweeks, setExpandedGameweeks] = useState<Set<number>>(new Set());
   const [selectedPlayer, setSelectedPlayer] = useState<string>('all');
-  const [viewMode, setViewMode] = useState<'overview' | 'pivot'>('overview');
+  const [viewMode, setViewMode] = useState<'overview' | 'pivot'>('pivot');
   const [pivotSortBy, setPivotSortBy] = useState<'name' | 'total' | number>('total');
   const [pivotSortOrder, setPivotSortOrder] = useState<'asc' | 'desc'>('desc');
 
@@ -211,16 +211,16 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
       } else if (pivotSortBy === 'total') {
         compareValue = a.totalGoals - b.totalGoals;
       } else if (typeof pivotSortBy === 'number') {
-        // Sort by specific gameweek goals
+        // Sort by specific gameweek team name
         const aPick = a.gameweekData[pivotSortBy];
         const bPick = b.gameweekData[pivotSortBy];
-        const aGoals = aPick && aPick.result === 'win' && aPick.fixtures?.is_completed 
-          ? ((aPick.picked_side === 'home' ? aPick.fixtures.home_score : aPick.fixtures.away_score) || 0) * (aPick.multiplier || 1)
-          : 0;
-        const bGoals = bPick && bPick.result === 'win' && bPick.fixtures?.is_completed 
-          ? ((bPick.picked_side === 'home' ? bPick.fixtures.home_score : bPick.fixtures.away_score) || 0) * (bPick.multiplier || 1)
-          : 0;
-        compareValue = aGoals - bGoals;
+        const aTeam = aPick 
+          ? (aPick.picked_side === 'home' ? aPick.fixtures?.home_team?.short_name : aPick.fixtures?.away_team?.short_name) || ''
+          : '';
+        const bTeam = bPick 
+          ? (bPick.picked_side === 'home' ? bPick.fixtures?.home_team?.short_name : bPick.fixtures?.away_team?.short_name) || ''
+          : '';
+        compareValue = aTeam.localeCompare(bTeam);
       }
       
       return pivotSortOrder === 'asc' ? compareValue : -compareValue;

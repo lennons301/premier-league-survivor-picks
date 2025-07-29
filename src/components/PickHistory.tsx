@@ -398,8 +398,8 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
                                   className={`
                                     w-16 h-12 rounded flex flex-col items-center justify-center text-xs font-bold mx-auto p-1
                                     ${pick.result === 'win' ? 'bg-green-500 text-white' :
-                                      pick.result === 'lose' ? 'bg-red-500 text-white' :
-                                      pick.result === 'draw' ? 'bg-blue-500 text-white' :
+                                      pick.result === 'loss' ? 'bg-red-500 text-white' :
+                                      pick.result === 'draw' ? 'bg-orange-500 text-white' :
                                       pick.fixtures?.is_completed ? 'bg-yellow-500 text-white' :
                                       'bg-gray-400 text-white'
                                     }

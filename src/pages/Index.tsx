@@ -74,7 +74,7 @@ const Index = () => {
                   </Button>
                 </Link>
                 <Link to="/games">
-                  <Button size="lg" variant="outline" className="border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary">
+                  <Button size="lg" variant="outline" className="bg-primary-foreground/10 border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary">
                     View My Games
                   </Button>
                 </Link>

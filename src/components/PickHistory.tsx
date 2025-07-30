@@ -138,7 +138,7 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
 
   // Create pivot table data - gameweeks as columns, users as rows
   const pivotData = useMemo(() => {
-    if (!gameGameweeks || !allPicks || !gamePlayers) return [];
+    if (!gameGameweeks || !gamePlayers) return [];
     
     // Only show gameweeks up to current active week
     const gameweekNumbers = gameGameweeks
@@ -146,7 +146,8 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
       .map(gg => gg.gameweek_number)
       .sort((a, b) => a - b);
     
-    const uniqueUsers = [...new Set(allPicks.map(pick => pick.user_id))];
+    // Include ALL game players, not just those who have made picks
+    const uniqueUsers = gamePlayers.map(player => player.user_id);
     
     return uniqueUsers.map(userId => {
       const userProfile = players.find(p => p.user_id === userId);
@@ -281,8 +282,12 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
 
               <div className="space-y-4">
                 {gameweeks.map(gameweek => {
+                  // Only show gameweeks that are active or finished
+                  const gameweekInfo = gameGameweeks?.find(gg => gg.gameweek_number === gameweek);
+                  const shouldShowPicks = gameweekInfo && (gameweekInfo.status === 'active' || gameweekInfo.status === 'finished');
+                  
                   const gameweekPicks = sortedAllPicks.filter(pick => pick.gameweek === gameweek);
-                  if (gameweekPicks.length === 0) return null;
+                  if (gameweekPicks.length === 0 || !shouldShowPicks) return null;
 
                   const isExpanded = expandedGameweeks.has(gameweek);
 

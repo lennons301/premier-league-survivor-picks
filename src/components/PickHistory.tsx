@@ -282,12 +282,37 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
 
               <div className="space-y-4">
                 {gameweeks.map(gameweek => {
-                  // Only show gameweeks that are active or finished
+                  // Show all gameweeks (open, active, finished)
                   const gameweekInfo = gameGameweeks?.find(gg => gg.gameweek_number === gameweek);
-                  const shouldShowPicks = gameweekInfo && (gameweekInfo.status === 'active' || gameweekInfo.status === 'finished');
                   
                   const gameweekPicks = sortedAllPicks.filter(pick => pick.gameweek === gameweek);
-                  if (gameweekPicks.length === 0 || !shouldShowPicks) return null;
+                  
+                  // For open gameweeks, also show pending picks (players who haven't picked yet)
+                  const pendingPicks = [];
+                  if (gameweekInfo?.status === 'open') {
+                    const playersWithPicks = new Set(gameweekPicks.map(p => p.user_id));
+                    const activePlayers = gamePlayers.filter(gp => !gp.is_eliminated);
+                    
+                    activePlayers.forEach(player => {
+                      if (!playersWithPicks.has(player.user_id)) {
+                        const playerProfile = players.find(p => p.user_id === player.user_id);
+                        pendingPicks.push({
+                          id: `pending-${player.user_id}-${gameweek}`,
+                          gameweek,
+                          user_id: player.user_id,
+                          picked_side: null,
+                          result: null,
+                          fixtures: null,
+                          profiles: playerProfile?.profiles || { display_name: playerProfile?.display_name || 'Unknown' },
+                          goals: 0,
+                          isPending: true
+                        });
+                      }
+                    });
+                  }
+                  
+                  const allGameweekEntries = [...gameweekPicks, ...pendingPicks];
+                  if (allGameweekEntries.length === 0) return null;
 
                   const isExpanded = expandedGameweeks.has(gameweek);
 
@@ -300,6 +325,20 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
                             <Badge variant="outline">
                               {gameweekPicks.length} picks
                             </Badge>
+                            {gameweekInfo?.status === 'open' && pendingPicks.length > 0 && (
+                              <Badge variant="secondary">
+                                {pendingPicks.length} pending
+                              </Badge>
+                            )}
+                            {gameweekInfo && (
+                              <Badge variant={
+                                gameweekInfo.status === 'open' ? 'secondary' : 
+                                gameweekInfo.status === 'active' ? 'default' : 
+                                'outline'
+                              }>
+                                {gameweekInfo.status}
+                              </Badge>
+                            )}
                           </div>
                           <Button
                             variant="ghost"
@@ -385,13 +424,15 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
-                                {gameweekPicks.map((pick) => (
-                                  <TableRow key={pick.id}>
+                                {allGameweekEntries.map((pick) => (
+                                  <TableRow key={pick.id} className={pick.isPending ? "opacity-60" : ""}>
                                     <TableCell className="font-medium">
                                       {pick.profiles?.display_name || 'Unknown'}
                                     </TableCell>
                                     <TableCell>
-                                      {pick.fixtures ? (
+                                      {pick.isPending ? (
+                                        <span className="text-muted-foreground italic">Pick pending</span>
+                                      ) : pick.fixtures ? (
                                         <span className="text-sm">
                                           {pick.fixtures.home_team.short_name} vs {pick.fixtures.away_team.short_name}
                                         </span>
@@ -399,52 +440,56 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
                                         <span className="text-muted-foreground">No fixture data</span>
                                       )}
                                     </TableCell>
-                                    <TableCell>
-                                      <div className="flex items-center gap-2">
-                                        <Badge 
-                                          variant={pick.picked_side === 'home' ? 'default' : 'secondary'}
-                                          className="text-xs"
-                                        >
-                                          {pick.picked_side === 'home' 
-                                            ? pick.fixtures?.home_team.short_name 
-                                            : pick.fixtures?.away_team.short_name
-                                          }
-                                        </Badge>
-                                        {pick.multiplier && pick.multiplier > 1 && (
-                                          <Badge variant="outline" className="text-xs">
-                                            {pick.multiplier}x
-                                          </Badge>
-                                        )}
-                                      </div>
-                                    </TableCell>
-                                    <TableCell>
-                                      <Badge 
-                                        variant={
-                                          pick.result === 'win' ? 'default' :
-                                          pick.result === 'lose' ? 'destructive' :
-                                          pick.result === 'draw' ? 'secondary' : 'outline'
-                                        }
-                                        className="capitalize"
-                                      >
-                                        {pick.result || 'Pending'}
-                                      </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                      <div className="flex items-center justify-end gap-2">
-                                        <span className="font-semibold">
-                                          {pick.goals}
-                                        </span>
-                                        <Target className="h-4 w-4 text-muted-foreground" />
-                                      </div>
-                                    </TableCell>
-                                  </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
-                          </div>
-                        </CardContent>
-                      )}
-                    </Card>
+                                     <TableCell>
+                                       {pick.isPending ? (
+                                         <Badge variant="outline" className="text-xs">
+                                           No pick yet
+                                         </Badge>
+                                       ) : (
+                                         <div className="flex items-center gap-2">
+                                           <Badge
+                                             variant={pick.picked_side === 'home' ? 'default' : 'secondary'}
+                                             className="text-xs"
+                                           >
+                                             {pick.picked_side === 'home' 
+                                               ? pick.fixtures?.home_team.short_name 
+                                               : pick.fixtures?.away_team.short_name
+                                             }
+                                           </Badge>
+                                           {pick.multiplier && pick.multiplier > 1 && (
+                                             <Badge variant="outline" className="text-xs">
+                                               {pick.multiplier}x
+                                             </Badge>
+                                           )}
+                                         </div>
+                                       )}
+                                     </TableCell>
+                                     <TableCell>
+                                       {pick.isPending ? (
+                                         <Badge variant="outline">Pending</Badge>
+                                       ) : pick.result ? (
+                                         <Badge variant={
+                                           pick.result === 'win' ? 'default' : 
+                                           pick.result === 'draw' ? 'secondary' : 
+                                           'destructive'
+                                         }>
+                                           {pick.result}
+                                         </Badge>
+                                       ) : (
+                                         <span className="text-muted-foreground">Pending</span>
+                                       )}
+                                     </TableCell>
+                                     <TableCell className="text-right font-medium">
+                                       {pick.isPending ? '-' : (pick.goals || 0)}
+                                     </TableCell>
+                                   </TableRow>
+                                 ))}
+                               </TableBody>
+                             </Table>
+                           </div>
+                         </CardContent>
+                       )}
+                     </Card>
                   );
                 })}
               </div>

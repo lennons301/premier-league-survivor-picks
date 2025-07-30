@@ -455,6 +455,8 @@ export default function PlayerProgressTable({
                       const pick = user.gameweekData[gw.gameweek_number];
                       const isCurrentGameweek = gw.gameweek_number === currentGameweek;
                       const shouldShowPick = !isCurrentGameweek || gameGameweek?.picks_visible;
+                      const isOpenGameweek = gw.status === 'open';
+                      const hasPick = !!pick;
                       
                       return (
                         <TableCell key={gw.gameweek_number} className={`text-center ${cellPadding[viewDensity]}`}>
@@ -480,6 +482,18 @@ export default function PlayerProgressTable({
                                   vs {pick.opponent}
                                 </div>
                               )}
+                            </div>
+                          ) : isOpenGameweek && !user.isEliminated ? (
+                            <div
+                              className={`
+                                ${viewDensity === 'compact' ? 'w-12 h-8 text-[10px]' : viewDensity === 'normal' ? 'w-14 h-10 text-xs' : 'w-16 h-12 text-sm'} 
+                                rounded flex items-center justify-center mx-auto p-1 border-2 border-dashed border-orange-300 bg-orange-50 text-orange-600
+                              `}
+                              title="Pick pending - deadline not passed yet"
+                            >
+                              <div className="font-medium">
+                                {viewDensity === 'compact' ? '⏳' : 'Pending'}
+                              </div>
                             </div>
                           ) : (
                             <div className="text-muted-foreground">-</div>

@@ -4,4 +4,5 @@
 DELETE FROM public.picks;
 DELETE FROM public.game_players;
 DELETE FROM public.gameweek_deadlines;
+DELETE FROM public.game_gameweeks;
 DELETE FROM public.games;

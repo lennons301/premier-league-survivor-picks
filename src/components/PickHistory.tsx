@@ -249,6 +249,7 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
                 gameGameweeks={gameGameweeks || []}
                 currentGameweek={currentGameweek}
                 gameGameweek={gameGameweek}
+                allPicks={allPicks}
               />
             </TabsContent>
 
@@ -429,41 +430,47 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
                                     <TableCell className="font-medium">
                                       {pick.profiles?.display_name || 'Unknown'}
                                     </TableCell>
-                                    <TableCell>
-                                      {pick.isPending ? (
-                                        <span className="text-muted-foreground italic">Pick pending</span>
-                                      ) : pick.fixtures ? (
-                                        <span className="text-sm">
-                                          {pick.fixtures.home_team.short_name} vs {pick.fixtures.away_team.short_name}
-                                        </span>
-                                      ) : (
-                                        <span className="text-muted-foreground">No fixture data</span>
-                                      )}
-                                    </TableCell>
                                      <TableCell>
                                        {pick.isPending ? (
-                                         <Badge variant="outline" className="text-xs">
-                                           No pick yet
-                                         </Badge>
+                                         <span className="text-muted-foreground italic">Pick pending</span>
+                                       ) : gameweekInfo?.status === 'open' ? (
+                                         <span className="text-sm text-muted-foreground">Pick hidden until active</span>
+                                       ) : pick.fixtures ? (
+                                         <span className="text-sm">
+                                           {pick.fixtures.home_team.short_name} vs {pick.fixtures.away_team.short_name}
+                                         </span>
                                        ) : (
-                                         <div className="flex items-center gap-2">
-                                           <Badge
-                                             variant={pick.picked_side === 'home' ? 'default' : 'secondary'}
-                                             className="text-xs"
-                                           >
-                                             {pick.picked_side === 'home' 
-                                               ? pick.fixtures?.home_team.short_name 
-                                               : pick.fixtures?.away_team.short_name
-                                             }
-                                           </Badge>
-                                           {pick.multiplier && pick.multiplier > 1 && (
-                                             <Badge variant="outline" className="text-xs">
-                                               {pick.multiplier}x
-                                             </Badge>
-                                           )}
-                                         </div>
+                                         <span className="text-muted-foreground">No fixture data</span>
                                        )}
                                      </TableCell>
+                                      <TableCell>
+                                        {pick.isPending ? (
+                                          <Badge variant="outline" className="text-xs">
+                                            No pick yet
+                                          </Badge>
+                                        ) : gameweekInfo?.status === 'open' ? (
+                                          <Badge variant="default" className="text-xs">
+                                            Pick made
+                                          </Badge>
+                                        ) : (
+                                          <div className="flex items-center gap-2">
+                                            <Badge
+                                              variant={pick.picked_side === 'home' ? 'default' : 'secondary'}
+                                              className="text-xs"
+                                            >
+                                              {pick.picked_side === 'home' 
+                                                ? pick.fixtures?.home_team.short_name 
+                                                : pick.fixtures?.away_team.short_name
+                                              }
+                                            </Badge>
+                                            {pick.multiplier && pick.multiplier > 1 && (
+                                              <Badge variant="outline" className="text-xs">
+                                                {pick.multiplier}x
+                                              </Badge>
+                                            )}
+                                          </div>
+                                        )}
+                                      </TableCell>
                                      <TableCell>
                                        {pick.isPending ? (
                                          <Badge variant="outline">Pending</Badge>

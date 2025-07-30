@@ -290,17 +290,27 @@ export default function MakePick() {
                           const homeTeamPickedGameweek = previousPicksMap[fixture.home_team_id];
                           const awayTeamPickedGameweek = previousPicksMap[fixture.away_team_id];
                           
-                          return (
+                           return (
                           <div key={fixture.id} className="border rounded-lg p-4">
-                            <div className="text-center mb-3">
-                              <span className="text-sm text-muted-foreground">
-                                {new Date(fixture.kickoff_time).toLocaleDateString()}
-                              </span>
+                            <div className="text-center mb-4 space-y-2">
+                              <div className="text-sm text-muted-foreground">
+                                {new Date(fixture.kickoff_time).toLocaleDateString("en-GB", {
+                                  weekday: "short",
+                                  month: "short", 
+                                  day: "numeric"
+                                })}
+                              </div>
+                              <div className="text-lg font-semibold text-foreground">
+                                {new Date(fixture.kickoff_time).toLocaleTimeString("en-GB", {
+                                  hour: "2-digit",
+                                  minute: "2-digit"
+                                })}
+                              </div>
                             </div>
                             
                             <div className="grid grid-cols-2 gap-4">
                               <label
-                                className={`flex flex-col items-center p-3 border rounded-lg transition-colors ${
+                                className={`flex flex-col items-center p-4 border rounded-lg transition-colors ${
                                   isHomeTeamPicked
                                     ? "opacity-50 cursor-not-allowed bg-gray-50 border-gray-300"
                                     : selectedFixture === fixture.id && selectedSide === "home"
@@ -322,9 +332,12 @@ export default function MakePick() {
                                     }
                                   }}
                                   disabled={isHomeTeamPicked}
-                                  className="mb-2"
+                                  className="mb-3"
                                 />
-                                <span className="font-medium text-center">{fixture.home_team?.name}</span>
+                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-lg mb-2">
+                                  {fixture.home_team?.short_name.substring(0, 3).toUpperCase()}
+                                </div>
+                                <span className="font-medium text-center text-sm leading-tight">{fixture.home_team?.name}</span>
                                 <span className="text-xs text-muted-foreground mt-1">(Home)</span>
                                 {isHomeTeamPicked && (
                                   <span className="text-xs mt-1 text-red-600">Picked GW{homeTeamPickedGameweek}</span>
@@ -335,7 +348,7 @@ export default function MakePick() {
                               </label>
 
                               <label
-                                className={`flex flex-col items-center p-3 border rounded-lg transition-colors ${
+                                className={`flex flex-col items-center p-4 border rounded-lg transition-colors ${
                                   isAwayTeamPicked
                                     ? "opacity-50 cursor-not-allowed bg-gray-50 border-gray-300"
                                     : selectedFixture === fixture.id && selectedSide === "away"
@@ -357,9 +370,12 @@ export default function MakePick() {
                                     }
                                   }}
                                   disabled={isAwayTeamPicked}
-                                  className="mb-2"
+                                  className="mb-3"
                                 />
-                                <span className="font-medium text-center">{fixture.away_team?.name}</span>
+                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center text-white font-bold text-lg mb-2">
+                                  {fixture.away_team?.short_name.substring(0, 3).toUpperCase()}
+                                </div>
+                                <span className="font-medium text-center text-sm leading-tight">{fixture.away_team?.name}</span>
                                 <span className="text-xs text-muted-foreground mt-1">(Away)</span>
                                 {isAwayTeamPicked && (
                                   <span className="text-xs mt-1 text-red-600">Picked GW{awayTeamPickedGameweek}</span>
@@ -370,7 +386,7 @@ export default function MakePick() {
                               </label>
                             </div>
                             
-                            <div className="text-center mt-2">
+                            <div className="text-center mt-3 pt-3 border-t">
                               <span className="text-sm font-medium">
                                 {fixture.home_team?.short_name} vs {fixture.away_team?.short_name}
                               </span>

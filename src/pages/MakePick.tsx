@@ -314,9 +314,9 @@ export default function MakePick() {
                                   isHomeTeamPicked
                                     ? "opacity-50 cursor-not-allowed bg-gray-50 border-gray-300"
                                     : selectedFixture === fixture.id && selectedSide === "home"
-                                    ? "bg-primary text-primary-foreground border-primary cursor-pointer"
+                                    ? "bg-primary text-primary-foreground border-primary cursor-pointer shadow-lg ring-2 ring-primary/20"
                                     : currentPick?.fixture_id === fixture.id && currentPick?.picked_side === "home"
-                                    ? "bg-green-100 border-green-500 text-green-800 cursor-pointer"
+                                    ? "bg-primary/10 border-primary text-primary cursor-pointer shadow-md ring-2 ring-primary/30"
                                     : "hover:bg-muted cursor-pointer"
                                 }`}
                               >
@@ -352,9 +352,9 @@ export default function MakePick() {
                                   isAwayTeamPicked
                                     ? "opacity-50 cursor-not-allowed bg-gray-50 border-gray-300"
                                     : selectedFixture === fixture.id && selectedSide === "away"
-                                    ? "bg-primary text-primary-foreground border-primary cursor-pointer"
+                                    ? "bg-primary text-primary-foreground border-primary cursor-pointer shadow-lg ring-2 ring-primary/20"
                                     : currentPick?.fixture_id === fixture.id && currentPick?.picked_side === "away"
-                                    ? "bg-green-100 border-green-500 text-green-800 cursor-pointer"
+                                    ? "bg-primary/10 border-primary text-primary cursor-pointer shadow-md ring-2 ring-primary/30"
                                     : "hover:bg-muted cursor-pointer"
                                 }`}
                               >

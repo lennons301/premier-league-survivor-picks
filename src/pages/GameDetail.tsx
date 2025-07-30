@@ -86,6 +86,24 @@ const GameDetail = () => {
     enabled: !!user,
   });
 
+  // Fetch current pick for button text
+  const { data: currentPick } = useQuery({
+    queryKey: ["current-pick", gameId, game?.current_gameweek, user?.id],
+    queryFn: async () => {
+      if (!user?.id || !game?.current_gameweek) return null;
+      const { data, error } = await supabase
+        .from("picks")
+        .select("*")
+        .eq("game_id", gameId)
+        .eq("user_id", user.id)
+        .eq("gameweek", game.current_gameweek)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id && !!game?.current_gameweek,
+  });
+
   // Fetch current gameweek deadline
   const { data: currentDeadline } = useQuery({
     queryKey: ["current-deadline", gameId, game?.current_gameweek],
@@ -320,7 +338,7 @@ const GameDetail = () => {
                     <Link to={`/games/${gameId}/pick`}>
                       <Button className="w-full">
                         <Play size={16} className="mr-2" />
-                        Make Pick for GW {game.current_gameweek}
+                        {currentPick ? `Edit Pick for GW ${game.current_gameweek}` : `Make Pick for GW ${game.current_gameweek}`}
                       </Button>
                     </Link>
                   )}

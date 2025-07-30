@@ -129,7 +129,7 @@ const Games = () => {
       
       if (error) throw error;
       
-      // Add prize pot data to my games
+      // Add prize pot data to my games and check for current picks
       const gamesWithPrizePots = await Promise.all(
         data.map(async (gamePlayer: any) => {
           const { data: prizePot } = await supabase
@@ -149,13 +149,27 @@ const Games = () => {
               winner = winnerProfile;
             }
           }
+
+          // Check for current pick
+          let currentPick = null;
+          if (gamePlayer.games.status === 'active') {
+            const { data: pickData } = await supabase
+              .from("picks")
+              .select("*")
+              .eq("game_id", gamePlayer.games.id)
+              .eq("user_id", user.id)
+              .eq("gameweek", gamePlayer.games.current_gameweek)
+              .maybeSingle();
+            currentPick = pickData;
+          }
           
           return {
             ...gamePlayer,
             games: {
               ...gamePlayer.games,
               prize_pot: prizePot,
-              winner: winner
+              winner: winner,
+              current_pick: currentPick
             }
           };
         })
@@ -255,7 +269,7 @@ const Games = () => {
                       {gamePlayer.games.status === "active" && !gamePlayer.is_eliminated && (
                         <Link to={`/games/${gamePlayer.games.id}/pick`} className="flex-1">
                           <Button size="sm" className="w-full">
-                            Make Pick
+                            {gamePlayer.games.current_pick ? `Edit Pick for GW ${gamePlayer.games.current_gameweek}` : `Make Pick for GW ${gamePlayer.games.current_gameweek}`}
                           </Button>
                         </Link>
                       )}

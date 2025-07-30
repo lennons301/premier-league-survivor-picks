@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import PlayerProgressTable from "@/components/PlayerProgressTable";
 
 interface Pick {
   id: string;
@@ -62,9 +63,6 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [expandedGameweeks, setExpandedGameweeks] = useState<Set<number>>(new Set());
   const [selectedPlayer, setSelectedPlayer] = useState<string>('all');
-  const [pivotSortBy, setPivotSortBy] = useState<'name' | 'total' | number>('total');
-  const [pivotSortOrder, setPivotSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'eliminated'>('all');
 
   // Group picks by gameweek
   const picksByGameweek = allPicks.reduce((acc, pick) => {
@@ -211,50 +209,6 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
     setExpandedGameweeks(newExpanded);
   };
 
-  const handlePivotSort = (column: 'name' | 'total' | number) => {
-    if (pivotSortBy === column) {
-      setPivotSortOrder(pivotSortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setPivotSortBy(column);
-      setPivotSortOrder(column === 'name' ? 'asc' : 'desc');
-    }
-  };
-
-  // Filter and sort pivot data
-  const filteredAndSortedPivotData = useMemo(() => {
-    let filtered = pivotData;
-    
-    // Apply status filter
-    if (statusFilter === 'active') {
-      filtered = filtered.filter(user => !user.isEliminated);
-    } else if (statusFilter === 'eliminated') {
-      filtered = filtered.filter(user => user.isEliminated);
-    }
-    
-    // Sort the filtered data
-    return [...filtered].sort((a, b) => {
-      let compareValue = 0;
-      
-      if (pivotSortBy === 'name') {
-        compareValue = a.displayName.localeCompare(b.displayName);
-      } else if (pivotSortBy === 'total') {
-        compareValue = a.totalGoals - b.totalGoals;
-      } else if (typeof pivotSortBy === 'number') {
-        // Sort by specific gameweek team name
-        const aPick = a.gameweekData[pivotSortBy];
-        const bPick = b.gameweekData[pivotSortBy];
-        const aTeam = aPick 
-          ? (aPick.picked_side === 'home' ? aPick.fixtures?.home_team?.short_name : aPick.fixtures?.away_team?.short_name) || ''
-          : '';
-        const bTeam = bPick 
-          ? (bPick.picked_side === 'home' ? bPick.fixtures?.home_team?.short_name : bPick.fixtures?.away_team?.short_name) || ''
-          : '';
-        compareValue = aTeam.localeCompare(bTeam);
-      }
-      
-      return pivotSortOrder === 'asc' ? compareValue : -compareValue;
-    });
-  }, [pivotData, pivotSortBy, pivotSortOrder, statusFilter]);
 
   if (gameweeks.length === 0) {
     return (
@@ -289,151 +243,12 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
             </TabsList>
 
             <TabsContent value="pivot" className="space-y-4">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h3 className="text-lg font-semibold">Player Progress & Standings</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Cumulative goals are used as tiebreakers when all players are eliminated
-                  </p>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <Filter className="h-4 w-4" />
-                    <Select value={statusFilter} onValueChange={(value: 'all' | 'active' | 'eliminated') => setStatusFilter(value)}>
-                      <SelectTrigger className="w-32">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Players</SelectItem>
-                        <SelectItem value="active">Active Only</SelectItem>
-                        <SelectItem value="eliminated">Eliminated Only</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Click headers to sort
-                  </p>
-                </div>
-              </div>
-
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead 
-                        className="sticky left-0 bg-background cursor-pointer hover:bg-muted/50 z-10"
-                        onClick={() => handlePivotSort('name')}
-                      >
-                        <div className="flex items-center gap-2">
-                          Player
-                          {pivotSortBy === 'name' && (
-                            pivotSortOrder === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                          )}
-                        </div>
-                      </TableHead>
-                      <TableHead className="sticky left-20 bg-background z-10">
-                        Status
-                      </TableHead>
-                      <TableHead 
-                        className="sticky left-32 bg-background cursor-pointer hover:bg-muted/50 z-10 text-right"
-                        onClick={() => handlePivotSort('total')}
-                      >
-                        <div className="flex items-center justify-end gap-2">
-                          Total Goals
-                          {pivotSortBy === 'total' && (
-                            pivotSortOrder === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                          )}
-                        </div>
-                      </TableHead>
-                      {gameGameweeks?.filter(gg => gg.gameweek_number <= currentGameweek).map(gw => (
-                        <TableHead 
-                          key={gw.gameweek_number} 
-                          className="text-center min-w-20 cursor-pointer hover:bg-muted/50"
-                          onClick={() => handlePivotSort(gw.gameweek_number)}
-                        >
-                          <div className="flex items-center justify-center gap-2">
-                            GW{gw.gameweek_number}
-                            {pivotSortBy === gw.gameweek_number && (
-                              pivotSortOrder === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                            )}
-                          </div>
-                        </TableHead>
-                      ))}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredAndSortedPivotData.map((user) => (
-                      <TableRow key={user.userId}>
-                        <TableCell className="sticky left-0 bg-background font-medium z-10">
-                          {user.displayName}
-                        </TableCell>
-                        <TableCell className="sticky left-20 bg-background z-10">
-                          <Badge
-                            variant={user.isEliminated ? "destructive" : "secondary"}
-                            className={user.isEliminated ? "" : "bg-green-100 text-green-800"}
-                          >
-                            {user.isEliminated 
-                              ? `Eliminated (GW${user.eliminatedGameweek})`
-                              : "Active"
-                            }
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="sticky left-32 bg-background text-right z-10">
-                          <div className="flex items-center justify-end gap-2">
-                            <span className="text-lg font-bold text-primary">
-                              {user.totalGoals}
-                            </span>
-                            <Target className="h-4 w-4 text-muted-foreground" />
-                          </div>
-                        </TableCell>
-                        {gameGameweeks?.filter(gg => gg.gameweek_number <= currentGameweek).map(gw => {
-                          const pick = user.gameweekData[gw.gameweek_number];
-                          const isCurrentGameweek = gw.gameweek_number === currentGameweek;
-                          const shouldShowPick = !isCurrentGameweek || gameGameweek?.picks_visible;
-                          
-                          return (
-                            <TableCell key={gw.gameweek_number} className="text-center min-w-20">
-                              {pick && shouldShowPick ? (
-                                <div
-                                  className={`
-                                    w-16 h-12 rounded flex flex-col items-center justify-center text-xs font-bold mx-auto p-1
-                                    ${pick.result === 'win' ? 'bg-green-500 text-white' :
-                                      pick.result === 'loss' ? 'bg-red-500 text-white' :
-                                      pick.result === 'draw' ? 'bg-orange-500 text-white' :
-                                      pick.fixtures?.is_completed ? 'bg-yellow-500 text-white' :
-                                      'bg-gray-400 text-white'
-                                    }
-                                  `}
-                                  title={`${pick.picked_side === 'home' ? pick.fixtures?.home_team?.short_name : pick.fixtures?.away_team?.short_name} vs ${pick.opponent} - ${pick.result}`}
-                                >
-                                  <div className="font-semibold leading-tight">
-                                    {pick.picked_side === 'home' ? pick.fixtures?.home_team?.short_name : pick.fixtures?.away_team?.short_name}
-                                  </div>
-                                  <div className="text-[10px] opacity-75 leading-tight">vs {pick.opponent}</div>
-                                  <div className="font-bold leading-tight">
-                                    {pick.fixtures?.is_completed 
-                                      ? (pick.picked_side === 'home' ? pick.fixtures.home_score : pick.fixtures.away_score) 
-                                      : '-'
-                                    }
-                                  </div>
-                                </div>
-                              ) : pick && !shouldShowPick ? (
-                                <div className="w-16 h-12 rounded bg-gray-200 flex items-center justify-center text-xs font-bold mx-auto">
-                                  Hidden
-                                </div>
-                              ) : (
-                                <div className="w-16 h-12 rounded border-2 border-dashed border-gray-300 flex items-center justify-center text-xs mx-auto">
-                                  -
-                                </div>
-                              )}
-                            </TableCell>
-                          );
-                        })}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+              <PlayerProgressTable 
+                pivotData={pivotData}
+                gameGameweeks={gameGameweeks || []}
+                currentGameweek={currentGameweek}
+                gameGameweek={gameGameweek}
+              />
             </TabsContent>
 
             <TabsContent value="overview" className="space-y-4">

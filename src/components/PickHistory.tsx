@@ -229,7 +229,10 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
   };
 
 
-  if (gameweeks.length === 0) {
+  // Check if there are any gameweeks to show (either with picks or pending picks)
+  const hasAnyGameweeks = gameweeks.length > 0 || (gameGameweeks && gameGameweeks.length > 0 && gamePlayers && gamePlayers.length > 0);
+
+  if (!hasAnyGameweeks) {
     return (
       <Card>
         <CardHeader>

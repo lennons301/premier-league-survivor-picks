@@ -45,12 +45,14 @@ export default function MakePick() {
           home_team:teams!fixtures_home_team_id_fkey (
             id,
             name,
-            short_name
+            short_name,
+            code
           ),
           away_team:teams!fixtures_away_team_id_fkey (
             id,
             name,
-            short_name
+            short_name,
+            code
           )
         `)
         .eq("gameweek", game.current_gameweek)
@@ -334,8 +336,21 @@ export default function MakePick() {
                                   disabled={isHomeTeamPicked}
                                   className="mb-3"
                                 />
-                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-lg mb-2">
-                                  {fixture.home_team?.short_name.substring(0, 3).toUpperCase()}
+                                <div className="w-12 h-12 mb-2 rounded-full overflow-hidden bg-white flex items-center justify-center border">
+                                  {fixture.home_team?.code ? (
+                                    <img 
+                                      src={`https://resources.premierleague.com/premierleague/badges/70/t${fixture.home_team.code}.png`}
+                                      alt={`${fixture.home_team.name} badge`}
+                                      className="w-10 h-10 object-contain"
+                                      onError={(e) => {
+                                        e.currentTarget.style.display = 'none';
+                                        (e.currentTarget.nextElementSibling as HTMLElement)!.style.display = 'flex';
+                                      }}
+                                    />
+                                  ) : null}
+                                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-sm" style={{ display: fixture.home_team?.code ? 'none' : 'flex' }}>
+                                    {fixture.home_team?.short_name.substring(0, 3).toUpperCase()}
+                                  </div>
                                 </div>
                                 <span className="font-medium text-center text-sm leading-tight">{fixture.home_team?.name}</span>
                                 <span className="text-xs text-muted-foreground mt-1">(Home)</span>
@@ -372,8 +387,21 @@ export default function MakePick() {
                                   disabled={isAwayTeamPicked}
                                   className="mb-3"
                                 />
-                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center text-white font-bold text-lg mb-2">
-                                  {fixture.away_team?.short_name.substring(0, 3).toUpperCase()}
+                                <div className="w-12 h-12 mb-2 rounded-full overflow-hidden bg-white flex items-center justify-center border">
+                                  {fixture.away_team?.code ? (
+                                    <img 
+                                      src={`https://resources.premierleague.com/premierleague/badges/70/t${fixture.away_team.code}.png`}
+                                      alt={`${fixture.away_team.name} badge`}
+                                      className="w-10 h-10 object-contain"
+                                      onError={(e) => {
+                                        e.currentTarget.style.display = 'none';
+                                        (e.currentTarget.nextElementSibling as HTMLElement)!.style.display = 'flex';
+                                      }}
+                                    />
+                                  ) : null}
+                                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center text-white font-bold text-sm" style={{ display: fixture.away_team?.code ? 'none' : 'flex' }}>
+                                    {fixture.away_team?.short_name.substring(0, 3).toUpperCase()}
+                                  </div>
                                 </div>
                                 <span className="font-medium text-center text-sm leading-tight">{fixture.away_team?.name}</span>
                                 <span className="text-xs text-muted-foreground mt-1">(Away)</span>

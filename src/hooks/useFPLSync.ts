@@ -23,11 +23,21 @@ export const useFPLSync = () => {
       
       if (error) {
         console.error('Error syncing FPL data:', error);
-        toast({
-          title: "Sync Error",
-          description: "Failed to sync FPL data. Please try again.",
-          variant: "destructive",
-        });
+        const errorMessage = error.message || error.toString();
+        
+        if (errorMessage.includes('rate limit')) {
+          toast({
+            title: "Rate Limit Exceeded",
+            description: "FPL API is busy. Data will sync automatically when available.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Sync Error",
+            description: "Failed to sync FPL data. Please try again later.",
+            variant: "destructive",
+          });
+        }
         return;
       }
 
@@ -42,11 +52,21 @@ export const useFPLSync = () => {
       }
     } catch (error) {
       console.error('Error calling sync function:', error);
-      toast({
-        title: "Sync Error", 
-        description: "Failed to sync FPL data. Please try again.",
-        variant: "destructive",
-      });
+      const errorMessage = error.message || error.toString();
+      
+      if (errorMessage.includes('rate limit')) {
+        toast({
+          title: "Rate Limit Exceeded", 
+          description: "FPL API is busy. Data will sync automatically when available.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Sync Error", 
+          description: "Failed to sync FPL data. Please try again later.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsLoading(false);
     }

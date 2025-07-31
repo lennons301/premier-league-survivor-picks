@@ -70,9 +70,16 @@ Deno.serve(async (req) => {
 
     // Fetch bootstrap data (gameweeks and teams)
     console.log('Fetching bootstrap data...')
-    const bootstrapResponse = await fetch('https://fantasy.premierleague.com/api/bootstrap-static/')
+    const bootstrapResponse = await fetch('https://fantasy.premierleague.com/api/bootstrap-static/', {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      }
+    })
     
     if (!bootstrapResponse.ok) {
+      if (bootstrapResponse.status === 403) {
+        throw new Error('FPL API rate limit exceeded. Please try again in a few minutes.')
+      }
       throw new Error(`Bootstrap API error: ${bootstrapResponse.status}`)
     }
 
@@ -124,9 +131,16 @@ Deno.serve(async (req) => {
 
     // Fetch fixtures
     console.log('Fetching fixtures...')
-    const fixturesResponse = await fetch('https://fantasy.premierleague.com/api/fixtures/')
+    const fixturesResponse = await fetch('https://fantasy.premierleague.com/api/fixtures/', {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      }
+    })
     
     if (!fixturesResponse.ok) {
+      if (fixturesResponse.status === 403) {
+        throw new Error('FPL API rate limit exceeded. Please try again in a few minutes.')
+      }
       throw new Error(`Fixtures API error: ${fixturesResponse.status}`)
     }
 

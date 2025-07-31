@@ -312,7 +312,7 @@ export default function MakePick() {
                               <label
                                 className={`flex flex-col items-center p-4 border rounded-lg transition-colors ${
                                   isHomeTeamPicked
-                                    ? "opacity-50 cursor-not-allowed bg-gray-50 border-gray-300"
+                                    ? "opacity-50 cursor-not-allowed bg-red-50 border-red-300 text-red-7000"
                                     : selectedFixture === fixture.id && selectedSide === "home"
                                     ? "bg-green-100 text-green-800 border-green-400 cursor-pointer shadow-lg ring-2 ring-green-500/40"
                                     : currentPick?.fixture_id === fixture.id && currentPick?.picked_side === "home"
@@ -350,7 +350,7 @@ export default function MakePick() {
                               <label
                                 className={`flex flex-col items-center p-4 border rounded-lg transition-colors ${
                                   isAwayTeamPicked
-                                    ? "opacity-50 cursor-not-allowed bg-gray-50 border-gray-300"
+                                    ? "opacity-50 cursor-not-allowed bg-red-50 border-red-300 text-red-700"
                                     : selectedFixture === fixture.id && selectedSide === "away"
                                     ? "bg-green-100 text-green-800 border-green-400 cursor-pointer shadow-lg ring-2 ring-green-500/40"
                                     : currentPick?.fixture_id === fixture.id && currentPick?.picked_side === "away"

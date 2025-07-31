@@ -157,6 +157,8 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
       const gameweekData: Record<number, any> = {};
       gameweekNumbers.forEach(gw => {
         const pick = userPicks.find(p => p.gameweek === gw);
+        const gameweekInfo = gameGameweeks?.find(gg => gg.gameweek_number === gw);
+        
         if (pick) {
           const opponentTeam = pick.picked_side === 'home' 
             ? pick.fixtures?.away_team?.short_name 
@@ -164,6 +166,13 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
           gameweekData[gw] = {
             ...pick,
             opponent: opponentTeam
+          };
+        } else if (gameweekInfo?.status === 'open' && !gamePlayer?.is_eliminated) {
+          // Add a pending entry for open gameweeks where no pick has been made
+          gameweekData[gw] = {
+            isPending: true,
+            gameweek: gw,
+            user_id: userId
           };
         }
       });

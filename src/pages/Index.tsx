@@ -230,7 +230,7 @@ const Index = () => {
               <CardContent>
                 <ul className="space-y-2 text-muted-foreground">
                   <li>• If your team loses or draws, you're eliminated</li>
-                  <li>• *If you are eliminated in week 1, you can rebuy and keep playing* </li>
+                  <li>• <b>If you are eliminated in week 1, you can rebuy and keep playing</b> </li>
                   <li>• Failed to pick counts as elimination</li>
                 </ul>
               </CardContent>

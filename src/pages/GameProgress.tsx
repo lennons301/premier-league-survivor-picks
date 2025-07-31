@@ -2,15 +2,18 @@ import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useFPLSync } from "@/hooks/useFPLSync";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Trophy, Users, Clock, Lock, Crown, Banknote } from "lucide-react";
 import PickHistory from "@/components/PickHistory";
+import { useEffect } from "react";
 
 export default function GameProgress() {
   const { gameId } = useParams<{ gameId: string }>();
   const { user } = useAuth();
+  const { syncFPLData } = useFPLSync();
 
   // Fetch game details with prize pot
   const { data: game } = useQuery({
@@ -162,6 +165,13 @@ export default function GameProgress() {
       }));
     },
   });
+
+  // Sync FPL data when gameweek is active (relevant for eliminations)
+  useEffect(() => {
+    if (gameGameweek?.status === 'active') {
+      syncFPLData();
+    }
+  }, [gameGameweek?.status, syncFPLData]);
 
   // Calculate statistics
   const activePlayers = players?.filter(p => !p.is_eliminated) || [];

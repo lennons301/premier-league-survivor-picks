@@ -1,5 +1,6 @@
 import { useParams, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useFPLSync } from "@/hooks/useFPLSync";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +16,7 @@ const GameDetail = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { syncFPLData } = useFPLSync();
   const [timeRemaining, setTimeRemaining] = useState<string>("");
 
   const { data: game, isLoading } = useQuery({
@@ -131,6 +133,30 @@ const GameDetail = () => {
     },
     enabled: !!game?.current_gameweek,
   });
+
+  // Fetch game gameweek status
+  const { data: gameGameweek } = useQuery({
+    queryKey: ["game-gameweek", gameId, game?.current_gameweek],
+    queryFn: async () => {
+      if (!game?.current_gameweek) return null;
+      const { data, error } = await supabase
+        .from("game_gameweeks")
+        .select("*")
+        .eq("game_id", gameId)
+        .eq("gameweek_number", game.current_gameweek)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!game?.current_gameweek,
+  });
+
+  // Sync FPL data when gameweek is active (relevant for eliminations)
+  useEffect(() => {
+    if (gameGameweek?.status === 'active') {
+      syncFPLData();
+    }
+  }, [gameGameweek?.status, syncFPLData]);
 
   // Countdown timer effect
   useEffect(() => {

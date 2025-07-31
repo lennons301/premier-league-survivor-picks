@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useFPLSync } from "@/hooks/useFPLSync";
 import { ArrowLeft, Clock } from "lucide-react";
 
 export default function MakePick() {
@@ -14,6 +15,7 @@ export default function MakePick() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { syncFPLData } = useFPLSync();
 
   const [selectedFixture, setSelectedFixture] = useState<string>("");
   const [selectedSide, setSelectedSide] = useState<"home" | "away" | "">("");
@@ -142,6 +144,11 @@ export default function MakePick() {
       setSelectedSide(currentPick.picked_side as "home" | "away");
     }
   }, [currentPick]);
+
+  // Sync FPL data on page load (relevant for fixture updates)
+  useEffect(() => {
+    syncFPLData();
+  }, [syncFPLData]);
 
   // Countdown timer effect
   useEffect(() => {

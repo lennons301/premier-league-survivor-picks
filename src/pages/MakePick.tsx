@@ -385,12 +385,7 @@ export default function MakePick() {
                                 )}
                               </label>
                             </div>
-                            
-                            <div className="text-center mt-3 pt-3 border-t">
-                              <span className="text-sm font-medium">
-                                {fixture.home_team?.short_name} vs {fixture.away_team?.short_name}
-                              </span>
-                            </div>
+                
                           </div>
                         );
                         })}

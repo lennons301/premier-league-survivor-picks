@@ -149,6 +149,14 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
     // Include ALL game players, not just those who have made picks
     const uniqueUsers = gamePlayers.map(player => player.user_id);
     
+    console.log('PickHistory Debug:', {
+      gameGameweeks: gameGameweeks?.map(g => ({ gw: g.gameweek_number, status: g.status })),
+      currentGameweek,
+      gameweekNumbers,
+      uniqueUsers,
+      gamePlayers: gamePlayers.map(p => ({ userId: p.user_id, eliminated: p.is_eliminated }))
+    });
+    
     return uniqueUsers.map(userId => {
       const userProfile = players.find(p => p.user_id === userId);
       const gamePlayer = gamePlayers.find(p => p.user_id === userId);
@@ -169,6 +177,7 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
           };
         } else if (gameweekInfo?.status === 'open' && !gamePlayer?.is_eliminated) {
           // Add a pending entry for open gameweeks where no pick has been made
+          console.log('Adding pending entry for:', { userId, gw, status: gameweekInfo?.status, eliminated: gamePlayer?.is_eliminated });
           gameweekData[gw] = {
             isPending: true,
             gameweek: gw,

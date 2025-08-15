@@ -249,6 +249,9 @@ export default function MakePick() {
     return <div>Loading...</div>;
   }
 
+  // Check if deadline has passed
+  const isDeadlinePassed = currentDeadline?.deadline && new Date(currentDeadline.deadline) <= new Date();
+
   // Get teams that have already been picked
   const previouslyPickedTeamIds = previousPicks?.map(pick => pick.team_id) || [];
   const previousPicksMap = previousPicks?.reduce((acc, pick) => {
@@ -281,7 +284,10 @@ export default function MakePick() {
             <CardHeader>
               <CardTitle>Select Your Pick for Gameweek {game.current_gameweek}</CardTitle>
               <CardDescription>
-                Choose a team from the available fixtures. You must pick a different team each gameweek.
+                {isDeadlinePassed 
+                  ? "The deadline has passed. Picks are now locked for this gameweek."
+                  : "Choose a team from the available fixtures. You must pick a different team each gameweek."
+                }
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -335,12 +341,12 @@ export default function MakePick() {
                                   value={`${fixture.id}-home`}
                                   checked={selectedFixture === fixture.id && selectedSide === "home"}
                                   onChange={() => {
-                                    if (!isHomeTeamPicked) {
+                                    if (!isHomeTeamPicked && !isDeadlinePassed) {
                                       setSelectedFixture(fixture.id);
                                       setSelectedSide("home");
                                     }
                                   }}
-                                  disabled={isHomeTeamPicked}
+                                  disabled={isHomeTeamPicked || isDeadlinePassed}
                                   className="mb-3"
                                 />
                                 <div className="w-12 h-12 mb-2 rounded-full overflow-hidden bg-white flex items-center justify-center border">
@@ -386,12 +392,12 @@ export default function MakePick() {
                                   value={`${fixture.id}-away`}
                                   checked={selectedFixture === fixture.id && selectedSide === "away"}
                                   onChange={() => {
-                                    if (!isAwayTeamPicked) {
+                                    if (!isAwayTeamPicked && !isDeadlinePassed) {
                                       setSelectedFixture(fixture.id);
                                       setSelectedSide("away");
                                     }
                                   }}
-                                  disabled={isAwayTeamPicked}
+                                  disabled={isAwayTeamPicked || isDeadlinePassed}
                                   className="mb-3"
                                 />
                                 <div className="w-12 h-12 mb-2 rounded-full overflow-hidden bg-white flex items-center justify-center border">
@@ -432,7 +438,7 @@ export default function MakePick() {
                     )}
                   </div>
 
-                  {fixtures.length > 0 && (
+                  {fixtures.length > 0 && !isDeadlinePassed && (
                     <Button 
                       type="submit" 
                       disabled={!selectedFixture || !selectedSide || submitPickMutation.isPending}
@@ -445,6 +451,11 @@ export default function MakePick() {
                         : "Submit Pick"
                       }
                     </Button>
+                  )}
+                  {isDeadlinePassed && (
+                    <div className="text-center py-4 text-muted-foreground">
+                      Picks are locked for this gameweek
+                    </div>
                   )}
                 </div>
               </form>

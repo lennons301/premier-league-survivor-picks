@@ -13,9 +13,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/Navbar";
+import RemovePlayerDialog from "@/components/RemovePlayerDialog";
 import { 
   Settings, Target, Users, TrendingUp, UserPlus, Calendar, 
-  Trophy, Clock, CheckCircle, XCircle, Plus, Edit, Lock 
+  Trophy, Clock, CheckCircle, XCircle, Plus, Edit, Lock, Trash2 
 } from "lucide-react";
 
 const GameAdmin = () => {
@@ -33,6 +34,19 @@ const GameAdmin = () => {
   const [newDeadline, setNewDeadline] = useState("");
   const [homeScore, setHomeScore] = useState("");
   const [awayScore, setAwayScore] = useState("");
+
+  // State for remove player dialog
+  const [removePlayerDialog, setRemovePlayerDialog] = useState<{
+    isOpen: boolean;
+    playerId: string | null;
+    playerName: string;
+    userId: string | null;
+  }>({
+    isOpen: false,
+    playerId: null,
+    playerName: "",
+    userId: null,
+  });
 
   // Fetch data
   const { data: game, isLoading } = useQuery({
@@ -513,6 +527,61 @@ const GameAdmin = () => {
     },
   });
 
+  // New mutation to remove player
+  const removePlayerMutation = useMutation({
+    mutationFn: async ({ playerId, userId }: { playerId: string; userId: string }) => {
+      // First, remove all picks for this user in this game
+      const { error: picksError } = await supabase
+        .from("picks")
+        .delete()
+        .eq("game_id", gameId)
+        .eq("user_id", userId);
+
+      if (picksError) throw picksError;
+
+      // Then remove the player from the game
+      const { error: playerError } = await supabase
+        .from("game_players")
+        .delete()
+        .eq("id", playerId);
+
+      if (playerError) throw playerError;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Player removed",
+        description: "Player has been successfully removed from the game",
+      });
+      queryClient.invalidateQueries({ queryKey: ["game-players", gameId] });
+      setRemovePlayerDialog({ isOpen: false, playerId: null, playerName: "", userId: null });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error removing player",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleRemovePlayer = (playerId: string, playerName: string, userId: string) => {
+    setRemovePlayerDialog({
+      isOpen: true,
+      playerId,
+      playerName,
+      userId,
+    });
+  };
+
+  const confirmRemovePlayer = () => {
+    if (removePlayerDialog.playerId && removePlayerDialog.userId) {
+      removePlayerMutation.mutate({
+        playerId: removePlayerDialog.playerId,
+        userId: removePlayerDialog.userId,
+      });
+    }
+  };
+
   // Check if user is admin
   if (!user || !game || game.created_by !== user.id) {
     return (
@@ -952,6 +1021,18 @@ const GameAdmin = () => {
                         ) : (
                           <Badge variant="secondary">Active</Badge>
                         )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleRemovePlayer(
+                            player.id, 
+                            (player as any).profiles?.display_name || "Unknown",
+                            player.user_id
+                          )}
+                          className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
                   ))}
@@ -960,6 +1041,14 @@ const GameAdmin = () => {
             </Card>
           </TabsContent>
         </Tabs>
+
+        <RemovePlayerDialog
+          isOpen={removePlayerDialog.isOpen}
+          onOpenChange={(open) => setRemovePlayerDialog(prev => ({ ...prev, isOpen: open }))}
+          onConfirm={confirmRemovePlayer}
+          playerName={removePlayerDialog.playerName}
+          isLoading={removePlayerMutation.isPending}
+        />
       </div>
     </div>
   );

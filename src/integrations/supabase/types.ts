@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -482,55 +482,55 @@ export type Database = {
       }
       sync_fixture_with_fpl: {
         Args: {
-          p_fpl_fixture_id: number
           p_code: number
           p_event: number
           p_finished: boolean
           p_finished_provisional: boolean
+          p_fpl_fixture_id: number
           p_kickoff_time: string
           p_minutes: number
           p_provisional_start_time: boolean
+          p_pulse_id: number
           p_started: boolean
+          p_stats?: Json
           p_team_a: number
+          p_team_a_difficulty: number
           p_team_a_score: number
           p_team_h: number
-          p_team_h_score: number
           p_team_h_difficulty: number
-          p_team_a_difficulty: number
-          p_pulse_id: number
-          p_stats?: Json
+          p_team_h_score: number
         }
         Returns: string
       }
       sync_gameweek_with_fpl: {
         Args: {
-          p_fpl_event_id: number
-          p_name: string
+          p_average_entry_score?: number
+          p_data_checked?: boolean
           p_deadline_time: string
           p_finished?: boolean
-          p_data_checked?: boolean
-          p_is_previous?: boolean
-          p_is_current?: boolean
-          p_is_next?: boolean
-          p_average_entry_score?: number
+          p_fpl_event_id: number
           p_highest_score?: number
           p_highest_scoring_entry?: number
+          p_is_current?: boolean
+          p_is_next?: boolean
+          p_is_previous?: boolean
+          p_name: string
         }
         Returns: string
       }
       sync_team_with_fpl: {
         Args: {
+          p_code?: number
           p_fpl_team_id: number
           p_name: string
-          p_short_name: string
-          p_code?: number
-          p_strength_overall_home?: number
-          p_strength_overall_away?: number
-          p_strength_attack_home?: number
-          p_strength_attack_away?: number
-          p_strength_defence_home?: number
-          p_strength_defence_away?: number
           p_pulse_id?: number
+          p_short_name: string
+          p_strength_attack_away?: number
+          p_strength_attack_home?: number
+          p_strength_defence_away?: number
+          p_strength_defence_home?: number
+          p_strength_overall_away?: number
+          p_strength_overall_home?: number
         }
         Returns: string
       }

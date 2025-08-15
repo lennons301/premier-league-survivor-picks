@@ -150,8 +150,9 @@ const Games = () => {
             }
           }
 
-          // Check for current pick
+          // Check for current pick and deadline
           let currentPick = null;
+          let currentDeadline = null;
           if (gamePlayer.games.status === 'active') {
             const { data: pickData } = await supabase
               .from("picks")
@@ -161,6 +162,26 @@ const Games = () => {
               .eq("gameweek", gamePlayer.games.current_gameweek)
               .maybeSingle();
             currentPick = pickData;
+
+            // Get current gameweek deadline
+            const { data: gameDeadline } = await supabase
+              .from("gameweek_deadlines")
+              .select("deadline")
+              .eq("game_id", gamePlayer.games.id)
+              .eq("gameweek", gamePlayer.games.current_gameweek)
+              .maybeSingle();
+            
+            if (gameDeadline) {
+              currentDeadline = gameDeadline.deadline;
+            } else {
+              // Fall back to global gameweek deadline
+              const { data: globalDeadline } = await supabase
+                .from("gameweeks")
+                .select("deadline")
+                .eq("gameweek_number", gamePlayer.games.current_gameweek)
+                .maybeSingle();
+              currentDeadline = globalDeadline?.deadline;
+            }
           }
           
           return {
@@ -169,7 +190,8 @@ const Games = () => {
               ...gamePlayer.games,
               prize_pot: prizePot,
               winner: winner,
-              current_pick: currentPick
+              current_pick: currentPick,
+              current_deadline: currentDeadline
             }
           };
         })
@@ -267,11 +289,17 @@ const Games = () => {
                         </Button>
                       </Link>
                       {gamePlayer.games.status === "active" && !gamePlayer.is_eliminated && (
-                        <Link to={`/games/${gamePlayer.games.id}/pick`} className="flex-1">
-                          <Button size="sm" className="w-full">
-                            {gamePlayer.games.current_pick ? `Edit Pick for GW ${gamePlayer.games.current_gameweek}` : `Make Pick for GW ${gamePlayer.games.current_gameweek}`}
+                        gamePlayer.games.current_deadline && new Date(gamePlayer.games.current_deadline) > new Date() ? (
+                          <Link to={`/games/${gamePlayer.games.id}/pick`} className="flex-1">
+                            <Button size="sm" className="w-full">
+                              {gamePlayer.games.current_pick ? `Edit Pick for GW ${gamePlayer.games.current_gameweek}` : `Make Pick for GW ${gamePlayer.games.current_gameweek}`}
+                            </Button>
+                          </Link>
+                        ) : (
+                          <Button size="sm" variant="outline" disabled className="w-full">
+                            {gamePlayer.games.current_pick ? `Pick Locked for GW ${gamePlayer.games.current_gameweek}` : `Deadline Passed for GW ${gamePlayer.games.current_gameweek}`}
                           </Button>
-                        </Link>
+                        )
                       )}
                     </div>
                     {gamePlayer.is_eliminated && (

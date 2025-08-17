@@ -283,14 +283,24 @@ export default function PlayerProgressTable({
               : pick.fixtures?.away_team?.short_name;
             gwCell.textContent = teamName || '';
             
-            // Color based on result
-            if (pick.result === 'goal') {
-              gwCell.style.backgroundColor = '#dcfce7';
-              gwCell.style.color = '#166534';
-            } else if (pick.result === 'no_goal') {
-              gwCell.style.backgroundColor = '#fef2f2';
-              gwCell.style.color = '#991b1b';
+            // Use the same color scheme as the table
+            if (pick.result === 'win') {
+              gwCell.style.backgroundColor = '#22c55e'; // bg-green-500
+              gwCell.style.color = '#ffffff';
+            } else if (pick.result === 'loss') {
+              gwCell.style.backgroundColor = '#ef4444'; // bg-red-500
+              gwCell.style.color = '#ffffff';
+            } else if (pick.result === 'draw') {
+              gwCell.style.backgroundColor = '#f97316'; // bg-orange-500
+              gwCell.style.color = '#ffffff';
+            } else if (pick.fixtures?.is_completed) {
+              gwCell.style.backgroundColor = '#eab308'; // bg-yellow-500
+              gwCell.style.color = '#ffffff';
+            } else {
+              gwCell.style.backgroundColor = '#9ca3af'; // bg-gray-400
+              gwCell.style.color = '#ffffff';
             }
+            gwCell.style.fontWeight = 'bold';
           }
           
           gwCell.style.border = '1px solid #e2e8f0';

@@ -22,6 +22,10 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { useIsMobile } from "@/hooks/use-mobile";
+import html2canvas from "html2canvas";
+import { toast } from "@/hooks/use-toast";
+import { Download, Copy } from "lucide-react";
 
 interface GameGameweek {
   gameweek_number: number;
@@ -68,6 +72,8 @@ export default function PlayerProgressTable({
   const [minimalView, setMinimalView] = useState(false);
   
   const tableRef = useRef<HTMLDivElement>(null);
+  const exportRef = useRef<HTMLDivElement>(null);
+  const isMobile = useIsMobile();
 
   // Initialize visible gameweeks (show last 5 by default on mobile, all on desktop)
   useEffect(() => {
@@ -182,6 +188,196 @@ export default function PlayerProgressTable({
     setStatusFilter('all');
   };
 
+  const exportToPNG = async () => {
+    if (!exportRef.current) return;
+
+    try {
+      toast({
+        title: "Generating export...",
+        description: "Please wait while we create your PNG export.",
+      });
+
+      // Create a temporary container with all filtered data
+      const tempContainer = document.createElement('div');
+      tempContainer.style.position = 'absolute';
+      tempContainer.style.left = '-9999px';
+      tempContainer.style.top = '0';
+      tempContainer.style.background = 'white';
+      tempContainer.style.padding = '20px';
+      tempContainer.style.fontSize = '14px';
+      tempContainer.style.fontFamily = 'system-ui, -apple-system, sans-serif';
+      
+      // Add title
+      const title = document.createElement('h3');
+      title.textContent = 'Player Progress & Standings';
+      title.style.fontSize = '18px';
+      title.style.fontWeight = 'bold';
+      title.style.marginBottom = '16px';
+      title.style.color = '#000';
+      tempContainer.appendChild(title);
+
+      // Create table
+      const table = document.createElement('table');
+      table.style.borderCollapse = 'collapse';
+      table.style.width = '100%';
+      table.style.border = '1px solid #e2e8f0';
+
+      // Create header
+      const thead = document.createElement('thead');
+      const headerRow = document.createElement('tr');
+      headerRow.style.backgroundColor = '#f8fafc';
+
+      // Add header cells
+      ['Player', 'Status', 'Total Goals', ...visibleGameweeksInRange.map(gw => `GW${gw.gameweek_number}`)].forEach(text => {
+        const th = document.createElement('th');
+        th.textContent = text;
+        th.style.border = '1px solid #e2e8f0';
+        th.style.padding = '8px';
+        th.style.textAlign = 'left';
+        th.style.fontWeight = 'bold';
+        th.style.fontSize = '12px';
+        headerRow.appendChild(th);
+      });
+      thead.appendChild(headerRow);
+      table.appendChild(thead);
+
+      // Create body
+      const tbody = document.createElement('tbody');
+      filteredAndSortedData.forEach(user => {
+        const row = document.createElement('tr');
+        
+        // Player name
+        const nameCell = document.createElement('td');
+        nameCell.textContent = user.displayName;
+        nameCell.style.border = '1px solid #e2e8f0';
+        nameCell.style.padding = '8px';
+        nameCell.style.fontWeight = '500';
+        row.appendChild(nameCell);
+
+        // Status
+        const statusCell = document.createElement('td');
+        statusCell.textContent = user.isEliminated ? `Eliminated (GW${user.eliminatedGameweek})` : 'Active';
+        statusCell.style.border = '1px solid #e2e8f0';
+        statusCell.style.padding = '8px';
+        statusCell.style.color = user.isEliminated ? '#dc2626' : '#16a34a';
+        statusCell.style.fontWeight = '500';
+        row.appendChild(statusCell);
+
+        // Total goals
+        const totalCell = document.createElement('td');
+        totalCell.textContent = user.totalGoals.toString();
+        totalCell.style.border = '1px solid #e2e8f0';
+        totalCell.style.padding = '8px';
+        totalCell.style.textAlign = 'right';
+        totalCell.style.fontWeight = 'bold';
+        row.appendChild(totalCell);
+
+        // Gameweek cells
+        visibleGameweeksInRange.forEach(gw => {
+          const gwCell = document.createElement('td');
+          const pick = user.gameweekData[gw.gameweek_number];
+          
+          if (pick) {
+            const teamName = pick.picked_side === 'home' 
+              ? pick.fixtures?.home_team?.short_name 
+              : pick.fixtures?.away_team?.short_name;
+            gwCell.textContent = teamName || '';
+            
+            // Color based on result
+            if (pick.result === 'goal') {
+              gwCell.style.backgroundColor = '#dcfce7';
+              gwCell.style.color = '#166534';
+            } else if (pick.result === 'no_goal') {
+              gwCell.style.backgroundColor = '#fef2f2';
+              gwCell.style.color = '#991b1b';
+            }
+          }
+          
+          gwCell.style.border = '1px solid #e2e8f0';
+          gwCell.style.padding = '6px';
+          gwCell.style.textAlign = 'center';
+          gwCell.style.fontSize = '11px';
+          row.appendChild(gwCell);
+        });
+
+        tbody.appendChild(row);
+      });
+      table.appendChild(tbody);
+      tempContainer.appendChild(table);
+
+      // Add summary
+      const summary = document.createElement('p');
+      summary.textContent = `Showing ${filteredAndSortedData.length} of ${pivotData.length} players • ${visibleGameweeksInRange.length} gameweeks visible`;
+      summary.style.marginTop = '16px';
+      summary.style.fontSize = '12px';
+      summary.style.color = '#64748b';
+      tempContainer.appendChild(summary);
+
+      document.body.appendChild(tempContainer);
+
+      // Generate canvas
+      const canvas = await html2canvas(tempContainer, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        width: tempContainer.scrollWidth,
+        height: tempContainer.scrollHeight
+      });
+
+      // Clean up
+      document.body.removeChild(tempContainer);
+
+      // Convert to blob
+      canvas.toBlob(async (blob) => {
+        if (!blob) return;
+
+        if (isMobile && navigator.clipboard && window.ClipboardItem) {
+          // Try to copy to clipboard on mobile
+          try {
+            await navigator.clipboard.write([
+              new ClipboardItem({ 'image/png': blob })
+            ]);
+            toast({
+              title: "Export copied to clipboard!",
+              description: "The player standings have been copied to your clipboard.",
+            });
+          } catch (clipboardError) {
+            // Fallback to download if clipboard fails
+            downloadBlob(blob);
+          }
+        } else {
+          // Download on desktop or if clipboard not supported
+          downloadBlob(blob);
+        }
+      }, 'image/png');
+
+    } catch (error) {
+      console.error('Export failed:', error);
+      toast({
+        title: "Export failed",
+        description: "There was an error generating the export. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const downloadBlob = (blob: Blob) => {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `player-standings-${new Date().toISOString().split('T')[0]}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    toast({
+      title: "Export downloaded!",
+      description: "The player standings have been downloaded as a PNG file.",
+    });
+  };
+
   // Density classes
   const densityClasses = {
     compact: "text-xs",
@@ -236,6 +432,12 @@ export default function PlayerProgressTable({
               <SelectItem value="eliminated">Eliminated Only</SelectItem>
             </SelectContent>
           </Select>
+
+          {/* Export Button */}
+          <Button variant="outline" size="sm" onClick={exportToPNG}>
+            {isMobile ? <Copy className="h-4 w-4 mr-2" /> : <Download className="h-4 w-4 mr-2" />}
+            {isMobile ? "Copy PNG" : "Export PNG"}
+          </Button>
 
           {/* View Settings */}
           <Popover>
@@ -364,7 +566,7 @@ export default function PlayerProgressTable({
       <Card>
         <CardContent className="p-0">
           <div 
-            ref={tableRef}
+            ref={exportRef}
             className="overflow-auto max-h-[70vh]"
             style={{ fontSize: `${zoomLevel[0]}%` }}
           >

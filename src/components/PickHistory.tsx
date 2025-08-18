@@ -383,63 +383,41 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
                         </div>
                       </CardHeader>
                       {isExpanded && (
-                        <CardContent>
+                        <CardContent className="p-2 sm:p-6">
                           <div className="overflow-x-auto">
                             <Table>
                               <TableHeader>
                                 <TableRow>
                                   <TableHead 
-                                    className="cursor-pointer hover:bg-muted/50"
+                                    className="cursor-pointer hover:bg-muted/50 p-2 text-xs sm:text-sm"
                                     onClick={() => handleSort('player')}
                                   >
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-1">
                                       Player
                                       {sortBy === 'player' && (
-                                        sortOrder === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                                        sortOrder === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
                                       )}
                                     </div>
                                   </TableHead>
                                   <TableHead 
-                                    className="cursor-pointer hover:bg-muted/50"
-                                    onClick={() => handleSort('fixture')}
-                                  >
-                                    <div className="flex items-center gap-2">
-                                      Fixture
-                                      {sortBy === 'fixture' && (
-                                        sortOrder === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                                      )}
-                                    </div>
-                                  </TableHead>
-                                  <TableHead 
-                                    className="cursor-pointer hover:bg-muted/50"
-                                    onClick={() => handleSort('pick')}
-                                  >
-                                    <div className="flex items-center gap-2">
-                                      Pick
-                                      {sortBy === 'pick' && (
-                                        sortOrder === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                                      )}
-                                    </div>
-                                  </TableHead>
-                                  <TableHead 
-                                    className="cursor-pointer hover:bg-muted/50"
+                                    className="cursor-pointer hover:bg-muted/50 p-2 text-xs sm:text-sm"
                                     onClick={() => handleSort('result')}
                                   >
-                                    <div className="flex items-center gap-2">
-                                      Result
+                                    <div className="flex items-center gap-1">
+                                      Pick & Result
                                       {sortBy === 'result' && (
-                                        sortOrder === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                                        sortOrder === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
                                       )}
                                     </div>
                                   </TableHead>
                                   <TableHead 
-                                    className="cursor-pointer hover:bg-muted/50 text-right"
+                                    className="cursor-pointer hover:bg-muted/50 text-right p-2 text-xs sm:text-sm"
                                     onClick={() => handleSort('goals')}
                                   >
-                                    <div className="flex items-center justify-end gap-2">
+                                    <div className="flex items-center justify-end gap-1">
                                       Goals
                                       {sortBy === 'goals' && (
-                                        sortOrder === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                                        sortOrder === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
                                       )}
                                     </div>
                                   </TableHead>
@@ -448,74 +426,67 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
                               <TableBody>
                                 {allGameweekEntries.map((pick) => (
                                   <TableRow key={pick.id} className={pick.isPending ? "opacity-60" : ""}>
-                                    <TableCell className="font-medium">
+                                    <TableCell className="font-medium p-2 text-xs sm:text-sm">
                                       {pick.profiles?.display_name || 'Unknown'}
                                     </TableCell>
-                                     <TableCell>
-                                       {pick.isPending ? (
-                                         <span className="text-muted-foreground italic">Pick pending</span>
-                                       ) : gameweekInfo?.status === 'open' ? (
-                                         <span className="text-sm text-muted-foreground">Pick hidden until active</span>
-                                       ) : pick.fixtures ? (
-                                         <span className="text-sm">
-                                           {pick.fixtures.home_team.short_name} vs {pick.fixtures.away_team.short_name}
-                                         </span>
-                                       ) : (
-                                         <span className="text-muted-foreground">No fixture data</span>
-                                       )}
-                                     </TableCell>
-                                      <TableCell>
-                                        {pick.isPending ? (
-                                          <Badge variant="outline" className="text-xs">
-                                            No pick yet
-                                          </Badge>
-                                        ) : gameweekInfo?.status === 'open' ? (
-                                          <Badge variant="default" className="text-xs">
-                                            Pick made
-                                          </Badge>
-                                        ) : (
-                                          <div className="flex items-center gap-2">
-                                            <Badge
-                                              variant={pick.picked_side === 'home' ? 'default' : 'secondary'}
-                                              className="text-xs"
-                                            >
-                                              {pick.picked_side === 'home' 
-                                                ? pick.fixtures?.home_team.short_name 
-                                                : pick.fixtures?.away_team.short_name
-                                              }
-                                            </Badge>
+                                    <TableCell className="p-2">
+                                      {pick.isPending ? (
+                                        <div className="text-xs text-muted-foreground">Pick pending</div>
+                                      ) : gameweekInfo?.status === 'open' ? (
+                                        <div className="text-xs text-muted-foreground">Pick hidden</div>
+                                      ) : (
+                                        <div className="space-y-1">
+                                          <div className="text-xs text-muted-foreground">
+                                            {pick.fixtures ? 
+                                              `${pick.fixtures.home_team.short_name} vs ${pick.fixtures.away_team.short_name}` : 
+                                              'No fixture'
+                                            }
+                                          </div>
+                                          <div className="flex items-center gap-1 flex-wrap">
+                                            {pick.picked_side && (
+                                              <Badge 
+                                                className={`text-xs px-1 py-0 ${
+                                                  pick.result === 'win' ? 'bg-green-500/20 text-green-700 border-green-300 dark:bg-green-500/30 dark:text-green-300 dark:border-green-500' :
+                                                  pick.result === 'lose' ? 'bg-red-500/20 text-red-700 border-red-300 dark:bg-red-500/30 dark:text-red-300 dark:border-red-500' :
+                                                  pick.result === 'draw' ? 'bg-orange-500/20 text-orange-700 border-orange-300 dark:bg-orange-500/30 dark:text-orange-300 dark:border-orange-500' :
+                                                  pick.fixtures?.is_completed ? 'bg-yellow-500/20 text-yellow-700 border-yellow-300 dark:bg-yellow-500/30 dark:text-yellow-300 dark:border-yellow-500' :
+                                                  'bg-gray-500/20 text-gray-700 border-gray-300 dark:bg-gray-500/30 dark:text-gray-300 dark:border-gray-500'
+                                                }`}
+                                              >
+                                                {pick.picked_side === 'home' 
+                                                  ? pick.fixtures?.home_team.short_name 
+                                                  : pick.fixtures?.away_team.short_name
+                                                }
+                                              </Badge>
+                                            )}
                                             {pick.multiplier && pick.multiplier > 1 && (
-                                              <Badge variant="outline" className="text-xs">
+                                              <Badge variant="outline" className="text-xs px-1 py-0">
                                                 {pick.multiplier}x
                                               </Badge>
                                             )}
+                                            {pick.result && (
+                                              <span className={`text-xs font-medium ${
+                                                pick.result === 'win' ? 'text-green-600 dark:text-green-400' :
+                                                pick.result === 'lose' ? 'text-red-600 dark:text-red-400' :
+                                                pick.result === 'draw' ? 'text-orange-600 dark:text-orange-400' :
+                                                'text-muted-foreground'
+                                              }`}>
+                                                {pick.result}
+                                              </span>
+                                            )}
                                           </div>
-                                        )}
-                                      </TableCell>
-                                     <TableCell>
-                                       {pick.isPending ? (
-                                         <Badge variant="outline">Pending</Badge>
-                                       ) : pick.result ? (
-                                         <Badge variant={
-                                           pick.result === 'win' ? 'default' : 
-                                           pick.result === 'draw' ? 'secondary' : 
-                                           'destructive'
-                                         }>
-                                           {pick.result}
-                                         </Badge>
-                                       ) : (
-                                         <span className="text-muted-foreground">Pending</span>
-                                       )}
-                                     </TableCell>
-                                     <TableCell className="text-right font-medium">
-                                       {pick.isPending ? '-' : (pick.goals || 0)}
-                                     </TableCell>
-                                   </TableRow>
-                                 ))}
-                               </TableBody>
-                             </Table>
-                           </div>
-                         </CardContent>
+                                        </div>
+                                      )}
+                                    </TableCell>
+                                    <TableCell className="text-right font-medium p-2 text-xs sm:text-sm">
+                                      {pick.isPending ? '-' : (pick.goals || 0)}
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        </CardContent>
                        )}
                      </Card>
                   );

@@ -227,17 +227,17 @@ export default function PlayerProgressTable({
       const headerRow = document.createElement('tr');
       headerRow.style.backgroundColor = '#f8fafc';
 
-      // Add header cells
-      ['Player', 'Status', 'Total Goals', ...visibleGameweeksInRange.map(gw => `GW${gw.gameweek_number}`)].forEach(text => {
-        const th = document.createElement('th');
-        th.textContent = text;
-        th.style.border = '1px solid #e2e8f0';
-        th.style.padding = '8px';
-        th.style.textAlign = 'left';
-        th.style.fontWeight = 'bold';
-        th.style.fontSize = '12px';
-        headerRow.appendChild(th);
-      });
+        // Add header cells
+        ['Player', 'Total Goals', ...visibleGameweeksInRange.map(gw => `GW${gw.gameweek_number}`)].forEach(text => {
+          const th = document.createElement('th');
+          th.textContent = text;
+          th.style.border = '1px solid #e2e8f0';
+          th.style.padding = '8px';
+          th.style.textAlign = 'left';
+          th.style.fontWeight = 'bold';
+          th.style.fontSize = '12px';
+          headerRow.appendChild(th);
+        });
       thead.appendChild(headerRow);
       table.appendChild(thead);
 
@@ -246,22 +246,24 @@ export default function PlayerProgressTable({
       filteredAndSortedData.forEach(user => {
         const row = document.createElement('tr');
         
+        // Color code the row based on status
+        if (user.isEliminated) {
+          row.style.backgroundColor = '#fef2f2';
+          row.style.color = '#dc2626';
+        } else {
+          row.style.backgroundColor = '#f0fdf4';
+          row.style.color = '#16a34a';
+        }
+
         // Player name
         const nameCell = document.createElement('td');
-        nameCell.textContent = user.displayName;
+        nameCell.textContent = user.isEliminated 
+          ? `${user.displayName} (Eliminated GW${user.eliminatedGameweek})`
+          : user.displayName;
         nameCell.style.border = '1px solid #e2e8f0';
         nameCell.style.padding = '8px';
         nameCell.style.fontWeight = '500';
         row.appendChild(nameCell);
-
-        // Status
-        const statusCell = document.createElement('td');
-        statusCell.textContent = user.isEliminated ? `Eliminated (GW${user.eliminatedGameweek})` : 'Active';
-        statusCell.style.border = '1px solid #e2e8f0';
-        statusCell.style.padding = '8px';
-        statusCell.style.color = user.isEliminated ? '#dc2626' : '#16a34a';
-        statusCell.style.fontWeight = '500';
-        row.appendChild(statusCell);
 
         // Total goals
         const totalCell = document.createElement('td');
@@ -409,7 +411,7 @@ export default function PlayerProgressTable({
   return (
     <div className="space-y-4">
       {/* Controls Header */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+      <div className="flex flex-col gap-2 sm:gap-4">
         <div>
           <h3 className="text-lg font-semibold">Player Progress & Standings</h3>
           <p className="text-sm text-muted-foreground">
@@ -418,42 +420,42 @@ export default function PlayerProgressTable({
         </div>
         
         {/* Controls */}
-        <div className="flex flex-wrap gap-2 items-center">
+        <div className="flex flex-wrap gap-1 sm:gap-2 items-center">
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search players..."
+              placeholder="Search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 w-32 sm:w-40"
+              className="pl-8 w-24 sm:w-32 text-xs sm:text-sm"
             />
           </div>
 
           {/* Status Filter */}
           <Select value={statusFilter} onValueChange={(value: 'all' | 'active' | 'eliminated') => setStatusFilter(value)}>
-            <SelectTrigger className="w-32">
-              <Filter className="h-4 w-4 mr-2" />
+            <SelectTrigger className="w-20 sm:w-28 text-xs sm:text-sm">
+              <Filter className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Players</SelectItem>
-              <SelectItem value="active">Active Only</SelectItem>
-              <SelectItem value="eliminated">Eliminated Only</SelectItem>
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="eliminated">Eliminated</SelectItem>
             </SelectContent>
           </Select>
 
           {/* Export Button */}
-          <Button variant="outline" size="sm" onClick={exportToPNG}>
-            {isMobile ? <Copy className="h-4 w-4 mr-2" /> : <Download className="h-4 w-4 mr-2" />}
-            {isMobile ? "Copy PNG" : "Export PNG"}
+          <Button variant="outline" size="sm" onClick={exportToPNG} className="text-xs sm:text-sm px-2 sm:px-3">
+            {isMobile ? <Copy className="h-3 w-3 sm:h-4 sm:w-4 mr-1" /> : <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />}
+            {isMobile ? "Copy" : "Export"}
           </Button>
 
           {/* View Settings */}
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" size="sm">
-                <Settings className="h-4 w-4 mr-2" />
+              <Button variant="outline" size="sm" className="text-xs sm:text-sm px-2 sm:px-3">
+                <Settings className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                 View
               </Button>
             </PopoverTrigger>
@@ -572,97 +574,109 @@ export default function PlayerProgressTable({
         {!minimalView && <span>• {visibleGameweeksInRange.length} gameweeks visible</span>}
       </div>
 
-      {/* Table Container */}
+      {/* Table Container - Mobile Optimized */}
       <Card>
         <CardContent className="p-0">
           <div 
             ref={exportRef}
-            className="overflow-auto max-h-[70vh]"
-            style={{ fontSize: `${zoomLevel[0]}%` }}
+            className="overflow-x-auto overflow-y-auto max-h-[70vh] scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
+            style={{ 
+              fontSize: `${zoomLevel[0]}%`,
+              WebkitOverflowScrolling: 'touch'
+            }}
           >
-            <Table className={densityClasses[viewDensity]}>
-              <TableHeader>
-                <TableRow>
-                  {/* Player Name - Always Sticky */}
-                  <TableHead 
-                    className="sticky left-0 bg-background cursor-pointer hover:bg-muted/50 z-20 border-r min-w-[120px] max-w-[150px]"
-                    onClick={() => handleSort('name')}
-                  >
-                    <div className="flex items-center gap-2">
-                      Player
-                      {sortBy === 'name' && (
-                        sortOrder === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                      )}
-                    </div>
-                  </TableHead>
-
-                  {/* Status Column */}
-                  <TableHead className="sticky left-[120px] bg-background z-20 border-r min-w-[100px] max-w-[120px]">
-                    Status
-                  </TableHead>
-
-                  {/* Total Goals - Always Sticky */}
-                  <TableHead 
-                    className="sticky left-[220px] bg-background cursor-pointer hover:bg-muted/50 z-20 border-r text-right min-w-[100px] max-w-[120px]"
-                    onClick={() => handleSort('total')}
-                  >
-                    <div className="flex items-center justify-end gap-2">
-                      Total Goals
-                      {sortBy === 'total' && (
-                        sortOrder === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                      )}
-                    </div>
-                  </TableHead>
-
-                  {/* Gameweek Columns */}
-                  {visibleGameweeksInRange.map(gw => (
+            <div className="min-w-max">
+              <Table className={`${densityClasses[viewDensity]} w-full`}>
+                <TableHeader>
+                  <TableRow>
+                    {/* Player Name - Sticky */}
                     <TableHead 
-                      key={gw.gameweek_number} 
-                      className="text-center min-w-[60px] max-w-[80px] cursor-pointer hover:bg-muted/50"
-                      onClick={() => handleSort(gw.gameweek_number)}
+                      className={`sticky left-0 bg-background cursor-pointer hover:bg-muted/50 z-20 border-r ${
+                        isMobile ? 'min-w-[100px] max-w-[120px] text-xs p-1' : 'min-w-[140px] max-w-[180px] p-2'
+                      }`}
+                      onClick={() => handleSort('name')}
                     >
-                      <div className="flex items-center justify-center gap-1">
-                        <span className="text-xs">GW{gw.gameweek_number}</span>
-                        {sortBy === gw.gameweek_number && (
+                      <div className="flex items-center gap-1">
+                        Player
+                        {sortBy === 'name' && (
                           sortOrder === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
                         )}
                       </div>
                     </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredAndSortedData.map((user) => (
-                  <TableRow key={user.userId} className="hover:bg-muted/30">
-                    {/* Player Name */}
-                    <TableCell className={`sticky left-0 bg-background font-medium z-10 border-r ${cellPadding[viewDensity]} truncate`}>
-                      <div className="truncate" title={user.displayName}>
-                        {user.displayName}
-                      </div>
-                    </TableCell>
 
-                    {/* Status */}
-                    <TableCell className={`sticky left-[120px] bg-background z-10 border-r ${cellPadding[viewDensity]}`}>
-                      <Badge
-                        variant={user.isEliminated ? "destructive" : "secondary"}
-                        className={`${user.isEliminated ? "" : "bg-green-100 text-green-800"} ${viewDensity === 'compact' ? 'text-xs px-1 py-0' : ''}`}
-                      >
-                        {user.isEliminated 
-                          ? `Eliminated${viewDensity !== 'compact' ? ` (GW${user.eliminatedGameweek})` : ''}`
-                          : "Active"
-                        }
-                      </Badge>
-                    </TableCell>
-
-                    {/* Total Goals */}
-                    <TableCell className={`sticky left-[220px] bg-background text-right z-10 border-r ${cellPadding[viewDensity]}`}>
+                    {/* Total Goals - Sticky */}
+                    <TableHead 
+                      className={`sticky ${isMobile ? 'left-[100px]' : 'left-[140px]'} bg-background cursor-pointer hover:bg-muted/50 z-20 border-r text-right ${
+                        isMobile ? 'min-w-[60px] max-w-[80px] text-xs p-1' : 'min-w-[100px] max-w-[120px] p-2'
+                      }`}
+                      onClick={() => handleSort('total')}
+                    >
                       <div className="flex items-center justify-end gap-1">
-                        <span className={`font-bold text-primary ${viewDensity === 'compact' ? 'text-sm' : 'text-lg'}`}>
-                          {user.totalGoals}
-                        </span>
-                        <Target className={`text-muted-foreground ${viewDensity === 'compact' ? 'h-3 w-3' : 'h-4 w-4'}`} />
+                        <Target className="h-3 w-3" />
+                        {isMobile ? 'Goals' : 'Total Goals'}
+                        {sortBy === 'total' && (
+                          sortOrder === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                        )}
                       </div>
-                    </TableCell>
+                    </TableHead>
+
+                    {/* Gameweek Columns */}
+                    {visibleGameweeksInRange.map(gw => (
+                      <TableHead 
+                        key={gw.gameweek_number} 
+                        className={`text-center cursor-pointer hover:bg-muted/50 ${
+                          isMobile ? 'min-w-[45px] max-w-[55px] text-xs p-1' : 'min-w-[60px] max-w-[80px] p-2'
+                        }`}
+                        onClick={() => handleSort(gw.gameweek_number)}
+                      >
+                        <div className="flex items-center justify-center gap-1">
+                          <span className="text-xs">GW{gw.gameweek_number}</span>
+                          {sortBy === gw.gameweek_number && (
+                            sortOrder === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                          )}
+                        </div>
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredAndSortedData.map((user) => (
+                    <TableRow 
+                      key={user.userId} 
+                      className={`border-l-4 ${
+                        user.isEliminated 
+                          ? "bg-red-50/50 hover:bg-red-100/50 border-l-red-500" 
+                          : "bg-green-50/50 hover:bg-green-100/50 border-l-green-500"
+                      }`}
+                    >
+                      {/* Player Name */}
+                      <TableCell 
+                        className={`sticky left-0 bg-inherit font-medium z-10 border-r ${
+                          isMobile ? 'p-1 text-xs' : 'p-2'
+                        } ${user.isEliminated ? 'text-red-700' : 'text-green-700'}`}
+                      >
+                        <div className="truncate" title={user.displayName}>
+                          {user.displayName}
+                        </div>
+                        {user.isEliminated && isMobile && (
+                          <div className="text-xs text-red-600 opacity-75">
+                            GW{user.eliminatedGameweek}
+                          </div>
+                        )}
+                      </TableCell>
+
+                      {/* Total Goals */}
+                      <TableCell 
+                        className={`sticky ${isMobile ? 'left-[100px]' : 'left-[140px]'} bg-inherit text-right z-10 border-r ${
+                          isMobile ? 'p-1 text-xs' : 'p-2'
+                        } ${user.isEliminated ? 'text-red-700' : 'text-green-700'}`}
+                      >
+                        <div className="flex items-center justify-end gap-1">
+                          <span className={`font-bold ${isMobile ? 'text-sm' : 'text-lg'}`}>
+                            {user.totalGoals}
+                          </span>
+                        </div>
+                      </TableCell>
 
                      {/* Gameweek Cells */}
                      {visibleGameweeksInRange.map(gw => {
@@ -730,6 +744,7 @@ export default function PlayerProgressTable({
                 ))}
               </TableBody>
             </Table>
+            </div>
           </div>
         </CardContent>
       </Card>

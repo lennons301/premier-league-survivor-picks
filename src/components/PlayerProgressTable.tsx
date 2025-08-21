@@ -64,6 +64,7 @@ export default function PlayerProgressTable({
   const [sortBy, setSortBy] = useState<SortField>('total');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'eliminated'>('all');
+  const [pickStatusFilter, setPickStatusFilter] = useState<'all' | 'picked' | 'pending'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [viewDensity, setViewDensity] = useState<ViewDensity>('normal');
   const [zoomLevel, setZoomLevel] = useState([100]);
@@ -104,6 +105,14 @@ export default function PlayerProgressTable({
       filtered = filtered.filter(user => user.isEliminated);
     }
     
+    // Apply pick status filter for current gameweek
+    if (pickStatusFilter !== 'all') {
+      filtered = filtered.filter(user => {
+        const hasPick = user.gameweekData[currentGameweek] !== undefined;
+        return pickStatusFilter === 'picked' ? hasPick : !hasPick;
+      });
+    }
+    
     // Apply search filter
     if (searchQuery) {
       filtered = filtered.filter(user => 
@@ -133,7 +142,7 @@ export default function PlayerProgressTable({
       
       return sortOrder === 'asc' ? compareValue : -compareValue;
     });
-  }, [pivotData, sortBy, sortOrder, statusFilter, searchQuery]);
+  }, [pivotData, sortBy, sortOrder, statusFilter, pickStatusFilter, searchQuery, currentGameweek]);
 
   // Get visible gameweeks in range
   const visibleGameweeksInRange = useMemo(() => {
@@ -186,6 +195,7 @@ export default function PlayerProgressTable({
     setMinimalView(false);
     setSearchQuery('');
     setStatusFilter('all');
+    setPickStatusFilter('all');
   };
 
   const exportToPNG = async () => {
@@ -442,6 +452,19 @@ export default function PlayerProgressTable({
               <SelectItem value="all">All</SelectItem>
               <SelectItem value="active">Active</SelectItem>
               <SelectItem value="eliminated">Eliminated</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Pick Status Filter */}
+          <Select value={pickStatusFilter} onValueChange={(value: 'all' | 'picked' | 'pending') => setPickStatusFilter(value)}>
+            <SelectTrigger className="w-20 sm:w-28 text-xs sm:text-sm">
+              <Target className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Picks</SelectItem>
+              <SelectItem value="picked">Picked</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
             </SelectContent>
           </Select>
 

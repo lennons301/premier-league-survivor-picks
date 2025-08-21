@@ -63,8 +63,7 @@ export default function PlayerProgressTable({
   // State management
   const [sortBy, setSortBy] = useState<SortField>('total');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'eliminated'>('all');
-  const [pickStatusFilter, setPickStatusFilter] = useState<'all' | 'picked' | 'pending'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'eliminated' | 'picked' | 'pending'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [viewDensity, setViewDensity] = useState<ViewDensity>('normal');
   const [zoomLevel, setZoomLevel] = useState([100]);
@@ -98,18 +97,17 @@ export default function PlayerProgressTable({
   const filteredAndSortedData = useMemo(() => {
     let filtered = pivotData;
     
-    // Apply status filter
+    // Apply status and pick status filters
     if (statusFilter === 'active') {
       filtered = filtered.filter(user => !user.isEliminated);
     } else if (statusFilter === 'eliminated') {
       filtered = filtered.filter(user => user.isEliminated);
-    }
-    
-    // Apply pick status filter for current gameweek
-    if (pickStatusFilter !== 'all') {
+    } else if (statusFilter === 'picked' || statusFilter === 'pending') {
+      // Filter by pick status for current gameweek
       filtered = filtered.filter(user => {
-        const hasPick = user.gameweekData[currentGameweek] !== undefined;
-        return pickStatusFilter === 'picked' ? hasPick : !hasPick;
+        const pick = user.gameweekData[currentGameweek];
+        const userHasPick = allPicks?.some(p => p.user_id === user.userId && p.gameweek === currentGameweek) || (!!pick && !pick.isPending);
+        return statusFilter === 'picked' ? userHasPick : !userHasPick;
       });
     }
     
@@ -142,7 +140,7 @@ export default function PlayerProgressTable({
       
       return sortOrder === 'asc' ? compareValue : -compareValue;
     });
-  }, [pivotData, sortBy, sortOrder, statusFilter, pickStatusFilter, searchQuery, currentGameweek]);
+  }, [pivotData, sortBy, sortOrder, statusFilter, searchQuery, currentGameweek, allPicks]);
 
   // Get visible gameweeks in range
   const visibleGameweeksInRange = useMemo(() => {
@@ -195,7 +193,6 @@ export default function PlayerProgressTable({
     setMinimalView(false);
     setSearchQuery('');
     setStatusFilter('all');
-    setPickStatusFilter('all');
   };
 
   const exportToPNG = async () => {
@@ -443,7 +440,7 @@ export default function PlayerProgressTable({
           </div>
 
           {/* Status Filter */}
-          <Select value={statusFilter} onValueChange={(value: 'all' | 'active' | 'eliminated') => setStatusFilter(value)}>
+          <Select value={statusFilter} onValueChange={(value: 'all' | 'active' | 'eliminated' | 'picked' | 'pending') => setStatusFilter(value)}>
             <SelectTrigger className="w-20 sm:w-28 text-xs sm:text-sm">
               <Filter className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
               <SelectValue />
@@ -452,19 +449,8 @@ export default function PlayerProgressTable({
               <SelectItem value="all">All</SelectItem>
               <SelectItem value="active">Active</SelectItem>
               <SelectItem value="eliminated">Eliminated</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {/* Pick Status Filter */}
-          <Select value={pickStatusFilter} onValueChange={(value: 'all' | 'picked' | 'pending') => setPickStatusFilter(value)}>
-            <SelectTrigger className="w-20 sm:w-28 text-xs sm:text-sm">
-              <Target className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Picks</SelectItem>
-              <SelectItem value="picked">Picked</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="picked">Picked (GW{currentGameweek})</SelectItem>
+              <SelectItem value="pending">Pending (GW{currentGameweek})</SelectItem>
             </SelectContent>
           </Select>
 

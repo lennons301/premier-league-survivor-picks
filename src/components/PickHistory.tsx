@@ -260,8 +260,8 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
         <CardContent>
           <Tabs defaultValue="pivot" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="pivot">Player Progress & Standings</TabsTrigger>
-              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="pivot">Player Progress</TabsTrigger>
+              <TabsTrigger value="overview">GW History</TabsTrigger>
             </TabsList>
 
             <TabsContent value="pivot" className="space-y-4">

@@ -208,7 +208,7 @@ export default function PlayerProgressTable({
       
       // Add title
       const title = document.createElement('h3');
-      title.textContent = 'Player Progress & Standings';
+      title.textContent = 'Player Progress';
       title.style.fontSize = '18px';
       title.style.fontWeight = 'bold';
       title.style.marginBottom = '16px';
@@ -435,7 +435,7 @@ export default function PlayerProgressTable({
       {/* Controls Header */}
       <div className="flex flex-col gap-2 sm:gap-4">
         <div>
-          <h3 className="text-lg font-semibold">Player Progress & Standings</h3>
+          <h3 className="text-lg font-semibold">Player Progress</h3>
           <p className="text-sm text-muted-foreground">
             Cumulative goals are used as tiebreakers when all players are eliminated
           </p>

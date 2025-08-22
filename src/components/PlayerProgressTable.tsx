@@ -621,7 +621,6 @@ export default function PlayerProgressTable({
                       onClick={() => handleSort('total')}
                     >
                       <div className="flex items-center justify-end gap-1">
-                        <Target className="h-3 w-3" />
                         {isMobile ? 'Goals' : 'Total Goals'}
                         {sortBy === 'total' && (
                           sortOrder === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
@@ -660,7 +659,7 @@ export default function PlayerProgressTable({
                     >
                       {/* Player Name */}
                       <TableCell 
-                        className={`sticky left-0 bg-inherit font-medium z-10 border-r ${
+                        className={`sticky left-0 bg-inherit font-medium z-10 border-r align-middle ${
                           isMobile ? 'p-1 text-xs' : 'p-2'
                         } ${user.isEliminated ? 'text-red-700' : 'text-green-700'}`}
                       >
@@ -676,7 +675,7 @@ export default function PlayerProgressTable({
 
                       {/* Total Goals */}
                       <TableCell 
-                        className={`sticky ${isMobile ? 'left-[100px]' : 'left-[140px]'} bg-inherit text-right z-10 border-r ${
+                        className={`sticky ${isMobile ? 'left-[100px]' : 'left-[140px]'} bg-inherit text-right z-10 border-r align-middle ${
                           isMobile ? 'p-1 text-xs' : 'p-2'
                         } ${user.isEliminated ? 'text-red-700' : 'text-green-700'}`}
                       >

@@ -262,6 +262,7 @@ export default function PlayerProgressTable({
         nameCell.style.border = '1px solid #e2e8f0';
         nameCell.style.padding = '4px 6px';
         nameCell.style.fontWeight = '500';
+        nameCell.style.verticalAlign = 'middle';
         row.appendChild(nameCell);
 
         // Total goals
@@ -271,6 +272,7 @@ export default function PlayerProgressTable({
         totalCell.style.padding = '4px 6px';
         totalCell.style.textAlign = 'center';
         totalCell.style.fontWeight = 'bold';
+        totalCell.style.verticalAlign = 'middle';
         row.appendChild(totalCell);
 
         // Gameweek cells
@@ -332,6 +334,7 @@ export default function PlayerProgressTable({
           gwCell.style.border = '1px solid #e2e8f0';
           gwCell.style.padding = '3px 4px';
           gwCell.style.textAlign = 'center';
+          gwCell.style.verticalAlign = 'middle';
           gwCell.style.fontSize = '11px';
           row.appendChild(gwCell);
         });

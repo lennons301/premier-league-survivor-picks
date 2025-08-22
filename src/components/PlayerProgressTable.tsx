@@ -235,7 +235,7 @@ export default function PlayerProgressTable({
       headerRow.style.backgroundColor = '#f8fafc';
 
         // Add header cells
-        ['Player', 'Total Goals', ...visibleGameweeksInRange.map(gw => `GW${gw.gameweek_number}`)].forEach(text => {
+        ['Player', 'Goals', ...visibleGameweeksInRange.map(gw => `GW${gw.gameweek_number}`)].forEach(text => {
           const th = document.createElement('th');
           th.textContent = text;
           th.style.border = '1px solid #e2e8f0';
@@ -268,7 +268,7 @@ export default function PlayerProgressTable({
           ? `${user.displayName} (Eliminated GW${user.eliminatedGameweek})`
           : user.displayName;
         nameCell.style.border = '1px solid #e2e8f0';
-        nameCell.style.padding = '8px';
+        nameCell.style.padding = '4px 6px';
         nameCell.style.fontWeight = '500';
         row.appendChild(nameCell);
 
@@ -276,8 +276,8 @@ export default function PlayerProgressTable({
         const totalCell = document.createElement('td');
         totalCell.textContent = user.totalGoals.toString();
         totalCell.style.border = '1px solid #e2e8f0';
-        totalCell.style.padding = '8px';
-        totalCell.style.textAlign = 'right';
+        totalCell.style.padding = '4px 6px';
+        totalCell.style.textAlign = 'center';
         totalCell.style.fontWeight = 'bold';
         row.appendChild(totalCell);
 
@@ -313,7 +313,7 @@ export default function PlayerProgressTable({
           }
           
           gwCell.style.border = '1px solid #e2e8f0';
-          gwCell.style.padding = '6px';
+          gwCell.style.padding = '3px 4px';
           gwCell.style.textAlign = 'center';
           gwCell.style.fontSize = '11px';
           row.appendChild(gwCell);

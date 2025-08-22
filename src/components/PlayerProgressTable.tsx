@@ -443,15 +443,17 @@ export default function PlayerProgressTable({
               placeholder="Search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 w-24 sm:w-32 text-xs sm:text-sm"
+              className="pl-8 w-20 sm:w-32 text-xs sm:text-sm"
             />
           </div>
 
           {/* Status Filter */}
           <Select value={statusFilter} onValueChange={(value: 'all' | 'active' | 'eliminated' | 'picked' | 'pending') => setStatusFilter(value)}>
-            <SelectTrigger className="w-20 sm:w-28 text-xs sm:text-sm">
-              <Filter className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-              <SelectValue />
+            <SelectTrigger className="w-8 sm:w-28 text-xs sm:text-sm px-1 sm:px-3">
+              <Filter className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+              <span className="hidden sm:inline">
+                <SelectValue />
+              </span>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All</SelectItem>
@@ -463,17 +465,19 @@ export default function PlayerProgressTable({
           </Select>
 
           {/* Export Button */}
-          <Button variant="outline" size="sm" onClick={exportToPNG} className="text-xs sm:text-sm px-2 sm:px-3">
-            {isMobile ? <Copy className="h-3 w-3 sm:h-4 sm:w-4 mr-1" /> : <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />}
-            {isMobile ? "Copy" : "Export"}
+          <Button variant="outline" size="sm" onClick={exportToPNG} className="px-1 sm:px-3">
+            {isMobile ? <Copy className="h-4 w-4" /> : <>
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </>}
           </Button>
 
           {/* View Settings */}
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="text-xs sm:text-sm px-2 sm:px-3">
-                <Settings className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                View
+              <Button variant="outline" size="sm" className="px-1 sm:px-3">
+                <Settings className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">View</span>
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-80 space-y-4">

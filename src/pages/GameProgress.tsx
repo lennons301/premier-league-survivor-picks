@@ -197,15 +197,15 @@ export default function GameProgress() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold">{game.name} - Progress</h1>
-          <div className="flex items-center gap-4">
-            <p className="text-muted-foreground">Current Gameweek: {game.current_gameweek}</p>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">{game.name} - Progress</h1>
+          <div className="flex items-center gap-2 sm:gap-4">
+            <p className="text-sm sm:text-base text-muted-foreground">GW{game.current_gameweek}</p>
             {gameGameweek && (
               <Badge variant={
                 gameGameweek.status === 'open' ? 'secondary' : 
                 gameGameweek.status === 'active' ? 'default' : 
                 'outline'
-              }>
+              } className="text-xs">
                 {gameGameweek.status === 'open' && <Clock className="h-3 w-3 mr-1" />}
                 {gameGameweek.status === 'active' && <Lock className="h-3 w-3 mr-1" />}
                 {gameGameweek.status}
@@ -216,55 +216,55 @@ export default function GameProgress() {
       </div>
 
       {/* Game Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Players</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+        <Card className="p-3 sm:p-6">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-0 sm:p-6">
+            <CardTitle className="text-xs sm:text-sm font-medium">Active</CardTitle>
+            <Users className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{activePlayers.length}</div>
-            <p className="text-xs text-muted-foreground">
+          <CardContent className="p-0 sm:p-6">
+            <div className="text-lg sm:text-2xl font-bold">{activePlayers.length}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">
               {eliminatedPlayers.length} eliminated
             </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Game Status</CardTitle>
-            <Trophy className="h-4 w-4 text-muted-foreground" />
+        <Card className="p-3 sm:p-6">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-0 sm:p-6">
+            <CardTitle className="text-xs sm:text-sm font-medium">Status</CardTitle>
+            <Trophy className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold capitalize">{game.status}</div>
-            <p className="text-xs text-muted-foreground">
-              Started GW{game.starting_gameweek}
+          <CardContent className="p-0 sm:p-6">
+            <div className="text-lg sm:text-2xl font-bold capitalize">{game.status}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">
+              From GW{game.starting_gameweek}
             </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Prize Pot</CardTitle>
-            <Banknote className="h-4 w-4 text-muted-foreground" />
+        <Card className="p-3 sm:p-6">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-0 sm:p-6">
+            <CardTitle className="text-xs sm:text-sm font-medium">Prize</CardTitle>
+            <Banknote className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">£{game.prize_pot ? Number(game.prize_pot).toFixed(2) : '0.00'}</div>
-            <p className="text-xs text-muted-foreground">
-              £10 entry + rebuys
+          <CardContent className="p-0 sm:p-6">
+            <div className="text-lg sm:text-2xl font-bold">£{game.prize_pot ? Number(game.prize_pot).toFixed(2) : '0.00'}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">
+              Entry + rebuys
             </p>
           </CardContent>
         </Card>
 
         {game.status === 'finished' && game.winner && (
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Winner</CardTitle>
-              <Crown className="h-4 w-4 text-yellow-600" />
+          <Card className="p-3 sm:p-6">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-0 sm:p-6">
+              <CardTitle className="text-xs sm:text-sm font-medium">Winner</CardTitle>
+              <Crown className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-600" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-yellow-600">{game.winner.display_name}</div>
-              <p className="text-xs text-muted-foreground">
+            <CardContent className="p-0 sm:p-6">
+              <div className="text-lg sm:text-2xl font-bold text-yellow-600">{game.winner.display_name}</div>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">
                 Congratulations!
               </p>
             </CardContent>

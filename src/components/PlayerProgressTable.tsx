@@ -285,8 +285,17 @@ export default function PlayerProgressTable({
         visibleGameweeksInRange.forEach(gw => {
           const gwCell = document.createElement('td');
           const pick = user.gameweekData[gw.gameweek_number];
+          const isCurrentGameweek = gw.gameweek_number === currentGameweek;
+          const shouldShowPick = !isCurrentGameweek || gameGameweek?.picks_visible;
+          const isOpenGameweek = gw.status === 'open';
+          const hasPick = !!pick && !pick.isPending;
+          const isPending = pick?.isPending;
           
-          if (pick) {
+          // Check if user has made a pick for this gameweek
+          const userHasPick = allPicks?.some(p => p.user_id === user.userId && p.gameweek === gw.gameweek_number) || hasPick;
+          
+          if (pick && shouldShowPick && !isPending && !isOpenGameweek) {
+            // Show actual team name for active/completed gameweeks
             const teamName = pick.picked_side === 'home' 
               ? pick.fixtures?.home_team?.short_name 
               : pick.fixtures?.away_team?.short_name;
@@ -310,6 +319,22 @@ export default function PlayerProgressTable({
               gwCell.style.color = '#ffffff';
             }
             gwCell.style.fontWeight = 'bold';
+          } else if ((isPending || (isOpenGameweek && !user.isEliminated)) && userHasPick) {
+            // Show "Picked" status for open gameweeks
+            gwCell.textContent = 'Picked';
+            gwCell.style.backgroundColor = '#dcfce7'; // bg-green-50
+            gwCell.style.color = '#16a34a'; // text-green-600
+            gwCell.style.fontWeight = '500';
+          } else if ((isPending || (isOpenGameweek && !user.isEliminated)) && !userHasPick) {
+            // Show "Pending" status for open gameweeks
+            gwCell.textContent = 'Pending';
+            gwCell.style.backgroundColor = '#fff7ed'; // bg-orange-50
+            gwCell.style.color = '#ea580c'; // text-orange-600
+            gwCell.style.fontWeight = '500';
+          } else {
+            // Show dash for no pick
+            gwCell.textContent = '-';
+            gwCell.style.color = '#9ca3af';
           }
           
           gwCell.style.border = '1px solid #e2e8f0';

@@ -235,8 +235,10 @@ export default function PlayerProgressTable({
           th.style.textAlign = 'left';
           th.style.fontWeight = 'bold';
           th.style.fontSize = '12px';
-          th.style.verticalAlign = 'middle';
           th.style.height = '40px';
+          th.style.display = 'table-cell';
+          th.style.verticalAlign = 'middle';
+          th.style.lineHeight = '1';
           headerRow.appendChild(th);
         });
       thead.appendChild(headerRow);
@@ -262,21 +264,25 @@ export default function PlayerProgressTable({
           ? `${user.displayName} (Eliminated GW${user.eliminatedGameweek})`
           : user.displayName;
         nameCell.style.border = '1px solid #e2e8f0';
-        nameCell.style.padding = '4px 6px';
+        nameCell.style.padding = '8px 6px';
         nameCell.style.fontWeight = '500';
-        nameCell.style.verticalAlign = 'middle';
         nameCell.style.height = '32px';
+        nameCell.style.display = 'table-cell';
+        nameCell.style.verticalAlign = 'middle';
+        nameCell.style.lineHeight = '1.2';
         row.appendChild(nameCell);
 
         // Total goals
         const totalCell = document.createElement('td');
         totalCell.textContent = user.totalGoals.toString();
         totalCell.style.border = '1px solid #e2e8f0';
-        totalCell.style.padding = '4px 6px';
+        totalCell.style.padding = '8px 6px';
         totalCell.style.textAlign = 'center';
         totalCell.style.fontWeight = 'bold';
-        totalCell.style.verticalAlign = 'middle';
         totalCell.style.height = '32px';
+        totalCell.style.display = 'table-cell';
+        totalCell.style.verticalAlign = 'middle';
+        totalCell.style.lineHeight = '1';
         row.appendChild(totalCell);
 
         // Gameweek cells
@@ -336,11 +342,13 @@ export default function PlayerProgressTable({
           }
           
           gwCell.style.border = '1px solid #e2e8f0';
-          gwCell.style.padding = '3px 4px';
+          gwCell.style.padding = '6px 4px';
           gwCell.style.textAlign = 'center';
-          gwCell.style.verticalAlign = 'middle';
           gwCell.style.fontSize = '11px';
           gwCell.style.height = '32px';
+          gwCell.style.display = 'table-cell';
+          gwCell.style.verticalAlign = 'middle';
+          gwCell.style.lineHeight = '1';
           row.appendChild(gwCell);
         });
 

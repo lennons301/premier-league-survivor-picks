@@ -675,11 +675,11 @@ export default function PlayerProgressTable({
 
                       {/* Total Goals */}
                       <TableCell 
-                        className={`sticky ${isMobile ? 'left-[100px]' : 'left-[140px]'} bg-inherit text-right z-10 border-r align-middle ${
+                        className={`sticky ${isMobile ? 'left-[100px]' : 'left-[140px]'} bg-inherit text-center z-10 border-r align-middle ${
                           isMobile ? 'p-1 text-xs' : 'p-2'
                         } ${user.isEliminated ? 'text-red-700' : 'text-green-700'}`}
                       >
-                        <div className="flex items-center justify-end gap-1">
+                        <div className="flex items-center justify-center gap-1">
                           <span className={`font-bold ${isMobile ? 'text-sm' : 'text-lg'}`}>
                             {user.totalGoals}
                           </span>

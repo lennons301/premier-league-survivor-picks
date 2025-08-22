@@ -435,21 +435,21 @@ export default function PlayerProgressTable({
       {/* Controls Header */}
       <div className="flex flex-col gap-2 sm:gap-4">
         {/* Controls */}
-        <div className="flex flex-wrap gap-1 sm:gap-2 items-center">
+        <div className="flex gap-1 sm:gap-2 items-center w-full">
           {/* Search */}
-          <div className="relative">
+          <div className="relative flex-1 sm:flex-none">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 w-20 sm:w-32 text-xs sm:text-sm"
+              className="pl-8 w-full sm:w-32 text-xs sm:text-sm"
             />
           </div>
 
           {/* Status Filter */}
           <Select value={statusFilter} onValueChange={(value: 'all' | 'active' | 'eliminated' | 'picked' | 'pending') => setStatusFilter(value)}>
-            <SelectTrigger className="w-8 sm:w-28 text-xs sm:text-sm px-1 sm:px-3">
+            <SelectTrigger className="w-16 sm:w-28 text-xs sm:text-sm px-1 sm:px-3">
               <Filter className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
               <span className="hidden sm:inline">
                 <SelectValue />
@@ -465,7 +465,7 @@ export default function PlayerProgressTable({
           </Select>
 
           {/* Export Button */}
-          <Button variant="outline" size="sm" onClick={exportToPNG} className="px-1 sm:px-3">
+          <Button variant="outline" size="sm" onClick={exportToPNG} className="px-2 sm:px-3">
             {isMobile ? <Copy className="h-4 w-4" /> : <>
               <Download className="h-4 w-4 mr-2" />
               Export
@@ -475,7 +475,7 @@ export default function PlayerProgressTable({
           {/* View Settings */}
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="px-1 sm:px-3">
+              <Button variant="outline" size="sm" className="px-2 sm:px-3">
                 <Settings className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">View</span>
               </Button>

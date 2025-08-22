@@ -434,13 +434,6 @@ export default function PlayerProgressTable({
     <div className="space-y-4">
       {/* Controls Header */}
       <div className="flex flex-col gap-2 sm:gap-4">
-        <div>
-          <h3 className="text-lg font-semibold">Player Progress</h3>
-          <p className="text-sm text-muted-foreground">
-            Cumulative goals are used as tiebreakers when all players are eliminated
-          </p>
-        </div>
-        
         {/* Controls */}
         <div className="flex flex-wrap gap-1 sm:gap-2 items-center">
           {/* Search */}

@@ -2,7 +2,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Slider } from "@/components/ui/slider";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { 
@@ -12,15 +11,12 @@ import {
   Filter, 
   Settings, 
   Search,
-  ZoomIn,
-  ZoomOut,
   Eye,
   EyeOff,
   RotateCcw
 } from "lucide-react";
 import { useState, useMemo, useRef, useEffect } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useIsMobile } from "@/hooks/use-mobile";
 import html2canvas from "html2canvas";
@@ -50,7 +46,7 @@ interface PlayerProgressTableProps {
   allPicks?: any[];
 }
 
-type ViewDensity = 'compact' | 'normal' | 'comfortable';
+type ViewDensity = 'compact' | 'normal';
 type SortField = 'name' | 'total' | number;
 
 export default function PlayerProgressTable({ 
@@ -66,10 +62,8 @@ export default function PlayerProgressTable({
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'eliminated' | 'picked' | 'pending'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [viewDensity, setViewDensity] = useState<ViewDensity>('normal');
-  const [zoomLevel, setZoomLevel] = useState([100]);
   const [visibleGameweeks, setVisibleGameweeks] = useState<Set<number>>(new Set());
   const [gameweekRange, setGameweekRange] = useState<[number, number]>([1, currentGameweek]);
-  const [minimalView, setMinimalView] = useState(false);
   
   const tableRef = useRef<HTMLDivElement>(null);
   const exportRef = useRef<HTMLDivElement>(null);
@@ -149,10 +143,10 @@ export default function PlayerProgressTable({
         gw.gameweek_number <= currentGameweek &&
         gw.gameweek_number >= gameweekRange[0] &&
         gw.gameweek_number <= gameweekRange[1] &&
-        (minimalView ? false : visibleGameweeks.has(gw.gameweek_number))
+        visibleGameweeks.has(gw.gameweek_number)
       )
       .sort((a, b) => a.gameweek_number - b.gameweek_number);
-  }, [gameGameweeks, currentGameweek, gameweekRange, visibleGameweeks, minimalView]);
+  }, [gameGameweeks, currentGameweek, gameweekRange, visibleGameweeks]);
 
   const handleSort = (column: SortField) => {
     if (sortBy === column) {
@@ -189,8 +183,6 @@ export default function PlayerProgressTable({
       setGameweekRange([availableGameweeks[0] || 1, availableGameweeks[availableGameweeks.length - 1] || currentGameweek]);
     }
     setViewDensity('normal');
-    setZoomLevel([100]);
-    setMinimalView(false);
     setSearchQuery('');
     setStatusFilter('all');
   };
@@ -425,14 +417,12 @@ export default function PlayerProgressTable({
   // Density classes
   const densityClasses = {
     compact: "text-xs",
-    normal: "text-sm", 
-    comfortable: "text-base"
+    normal: "text-sm"
   };
 
   const cellPadding = {
     compact: "p-1",
-    normal: "p-2",
-    comfortable: "p-4"
+    normal: "p-2"
   };
 
   const availableGameweeks = gameGameweeks
@@ -498,7 +488,7 @@ export default function PlayerProgressTable({
               <div className="space-y-2">
                 <Label className="text-sm font-medium">View Density</Label>
                 <div className="flex gap-2">
-                  {(['compact', 'normal', 'comfortable'] as ViewDensity[]).map((density) => (
+                  {(['compact', 'normal'] as ViewDensity[]).map((density) => (
                     <Button
                       key={density}
                       variant={viewDensity === density ? "default" : "outline"}
@@ -512,85 +502,58 @@ export default function PlayerProgressTable({
                 </div>
               </div>
 
-              {/* Zoom Level */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Zoom Level ({zoomLevel[0]}%)</Label>
-                <div className="flex items-center gap-2">
-                  <ZoomOut className="h-4 w-4" />
-                  <Slider
-                    value={zoomLevel}
-                    onValueChange={setZoomLevel}
-                    max={150}
-                    min={50}
-                    step={10}
-                    className="flex-1"
-                  />
-                  <ZoomIn className="h-4 w-4" />
-                </div>
-              </div>
-
-              {/* Minimal View Toggle */}
-              <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">Minimal View</Label>
-                <Switch checked={minimalView} onCheckedChange={setMinimalView} />
-              </div>
-
               {/* Gameweek Range */}
-              {!minimalView && (
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Gameweek Range</Label>
-                  <div className="flex items-center gap-2">
-                    <Select
-                      value={gameweekRange[0].toString()}
-                      onValueChange={(value) => setGameweekRange([parseInt(value), gameweekRange[1]])}
-                    >
-                      <SelectTrigger className="w-20">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableGameweeks.map(gw => (
-                          <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <span className="text-sm text-muted-foreground">to</span>
-                    <Select
-                      value={gameweekRange[1].toString()}
-                      onValueChange={(value) => setGameweekRange([gameweekRange[0], parseInt(value)])}
-                    >
-                      <SelectTrigger className="w-20">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableGameweeks.filter(gw => gw >= gameweekRange[0]).map(gw => (
-                          <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Gameweek Range</Label>
+                <div className="flex items-center gap-2">
+                  <Select
+                    value={gameweekRange[0].toString()}
+                    onValueChange={(value) => setGameweekRange([parseInt(value), gameweekRange[1]])}
+                  >
+                    <SelectTrigger className="w-20">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableGameweeks.map(gw => (
+                        <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <span className="text-sm text-muted-foreground">to</span>
+                  <Select
+                    value={gameweekRange[1].toString()}
+                    onValueChange={(value) => setGameweekRange([gameweekRange[0], parseInt(value)])}
+                  >
+                    <SelectTrigger className="w-20">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableGameweeks.filter(gw => gw >= gameweekRange[0]).map(gw => (
+                        <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              )}
+              </div>
 
               {/* Individual Gameweek Toggles */}
-              {!minimalView && (
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Show/Hide Gameweeks</Label>
-                  <div className="grid grid-cols-4 gap-1 max-h-32 overflow-y-auto">
-                    {availableGameweeks.filter(gw => gw >= gameweekRange[0] && gw <= gameweekRange[1]).map(gw => (
-                      <Button
-                        key={gw}
-                        variant={visibleGameweeks.has(gw) ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => toggleGameweekVisibility(gw)}
-                        className="text-xs h-8"
-                      >
-                        {visibleGameweeks.has(gw) ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
-                        <span className="ml-1">GW{gw}</span>
-                      </Button>
-                    ))}
-                  </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Show/Hide Gameweeks</Label>
+                <div className="grid grid-cols-4 gap-1 max-h-32 overflow-y-auto">
+                  {availableGameweeks.filter(gw => gw >= gameweekRange[0] && gw <= gameweekRange[1]).map(gw => (
+                    <Button
+                      key={gw}
+                      variant={visibleGameweeks.has(gw) ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => toggleGameweekVisibility(gw)}
+                      className="text-xs h-8"
+                    >
+                      {visibleGameweeks.has(gw) ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                      <span className="ml-1">GW{gw}</span>
+                    </Button>
+                  ))}
                 </div>
-              )}
+              </div>
 
               {/* Reset Button */}
               <Button variant="outline" size="sm" onClick={resetToDefaults} className="w-full">
@@ -605,7 +568,7 @@ export default function PlayerProgressTable({
       {/* Results Summary */}
       <div className="flex items-center gap-4 text-sm text-muted-foreground">
         <span>Showing {filteredAndSortedData.length} of {pivotData.length} players</span>
-        {!minimalView && <span>• {visibleGameweeksInRange.length} gameweeks visible</span>}
+        <span>• {visibleGameweeksInRange.length} gameweeks visible</span>
       </div>
 
       {/* Table Container - Mobile Optimized */}
@@ -615,7 +578,6 @@ export default function PlayerProgressTable({
             ref={exportRef}
             className="overflow-x-auto overflow-y-auto max-h-[70vh] scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
             style={{ 
-              fontSize: `${zoomLevel[0]}%`,
               WebkitOverflowScrolling: 'touch'
             }}
           >
@@ -728,7 +690,7 @@ export default function PlayerProgressTable({
                           {pick && shouldShowPick && !isPending ? (
                             <div
                               className={`
-                                ${viewDensity === 'compact' ? 'w-12 h-8 text-[10px]' : viewDensity === 'normal' ? 'w-14 h-10 text-xs' : 'w-16 h-12 text-sm'} 
+                                 ${viewDensity === 'compact' ? 'w-12 h-8 text-[10px]' : 'w-14 h-10 text-xs'} 
                                 rounded flex flex-col items-center justify-center font-bold mx-auto p-1
                                 ${pick.result === 'win' ? 'bg-green-500 text-white' :
                                   pick.result === 'loss' ? 'bg-red-500 text-white' :
@@ -751,7 +713,7 @@ export default function PlayerProgressTable({
                            ) : isPending || (isOpenGameweek && !user.isEliminated) ? (
                             <div
                               className={`
-                                ${viewDensity === 'compact' ? 'w-12 h-8 text-[10px]' : viewDensity === 'normal' ? 'w-14 h-10 text-xs' : 'w-16 h-12 text-sm'} 
+                                ${viewDensity === 'compact' ? 'w-12 h-8 text-[10px]' : 'w-14 h-10 text-xs'} 
                                 rounded flex items-center justify-center mx-auto p-1 border-2 border-dashed
                                 ${userHasPick 
                                   ? 'border-green-300 bg-green-50 text-green-600'

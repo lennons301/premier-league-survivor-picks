@@ -472,6 +472,10 @@ export type Database = {
         Args: { p_gameweek_number: number }
         Returns: undefined
       }
+      eliminate_players_who_failed_to_rebuy: {
+        Args: { p_gameweek_number: number }
+        Returns: undefined
+      }
       get_game_winner: {
         Args: { p_game_id: string }
         Returns: string

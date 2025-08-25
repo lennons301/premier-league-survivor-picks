@@ -472,6 +472,10 @@ export type Database = {
         Args: { p_gameweek_number: number }
         Returns: undefined
       }
+      eliminate_non_winners_after_first_gameweek: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       eliminate_players_who_failed_to_rebuy: {
         Args: { p_gameweek_number: number }
         Returns: undefined

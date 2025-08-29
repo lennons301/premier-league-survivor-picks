@@ -97,8 +97,11 @@ export default function PlayerProgressTable({
     } else if (statusFilter === 'eliminated') {
       filtered = filtered.filter(user => user.isEliminated);
     } else if (statusFilter === 'picked' || statusFilter === 'pending') {
-      // Filter by pick status for current gameweek
+      // Filter by pick status for current gameweek (exclude eliminated players)
       filtered = filtered.filter(user => {
+        // Skip eliminated players as they cannot make picks
+        if (user.isEliminated) return false;
+        
         const pick = user.gameweekData[currentGameweek];
         const userHasPick = allPicks?.some(p => p.user_id === user.userId && p.gameweek === currentGameweek) || (!!pick && !pick.isPending);
         return statusFilter === 'picked' ? userHasPick : !userHasPick;

@@ -488,6 +488,10 @@ export type Database = {
         Args: { game_id: string }
         Returns: boolean
       }
+      manually_activate_gameweek: {
+        Args: { p_game_id: string; p_gameweek_number: number }
+        Returns: undefined
+      }
       sync_fixture_with_fpl: {
         Args: {
           p_code: number

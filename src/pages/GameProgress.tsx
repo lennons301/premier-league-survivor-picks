@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useFPLSync } from "@/hooks/useFPLSync";
+import { useDeadlineCheck } from "@/hooks/useDeadlineCheck";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +15,7 @@ export default function GameProgress() {
   const { gameId } = useParams<{ gameId: string }>();
   const { user } = useAuth();
   const { syncFPLData } = useFPLSync();
+  const { checkDeadlines } = useDeadlineCheck();
 
   // Fetch game details with prize pot
   const { data: game } = useQuery({
@@ -165,6 +167,13 @@ export default function GameProgress() {
       }));
     },
   });
+
+  // Trigger deadline check when page loads and game gameweek is open
+  useEffect(() => {
+    if (gameId && gameGameweek?.status === 'open') {
+      checkDeadlines(gameId);
+    }
+  }, [gameId, gameGameweek?.status, checkDeadlines]);
 
   // Sync FPL data when gameweek is active (relevant for eliminations)
   useEffect(() => {

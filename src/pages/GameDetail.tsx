@@ -1,6 +1,7 @@
 import { useParams, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useFPLSync } from "@/hooks/useFPLSync";
+import { useDeadlineCheck } from '@/hooks/useDeadlineCheck';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +18,7 @@ const GameDetail = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { syncFPLData } = useFPLSync();
+  const { checkDeadlines } = useDeadlineCheck();
   const [timeRemaining, setTimeRemaining] = useState<string>("");
 
   const { data: game, isLoading } = useQuery({
@@ -150,6 +152,13 @@ const GameDetail = () => {
     },
     enabled: !!game?.current_gameweek,
   });
+
+  // Trigger deadline check when page loads and game gameweek is open
+  useEffect(() => {
+    if (gameId && gameGameweek?.status === 'open') {
+      checkDeadlines(gameId);
+    }
+  }, [gameId, gameGameweek?.status, checkDeadlines]);
 
   // Sync FPL data when gameweek is active (relevant for eliminations)
   useEffect(() => {

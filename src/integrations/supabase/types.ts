@@ -460,6 +460,17 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      admin_insert_pick: {
+        Args: {
+          p_fixture_id: string
+          p_game_id: string
+          p_gameweek: number
+          p_picked_side: string
+          p_team_id: string
+          p_user_id: string
+        }
+        Returns: string
+      }
       calculate_prize_pot: {
         Args: { p_game_id: string }
         Returns: number

@@ -12,6 +12,7 @@ import GameDetail from "./pages/GameDetail";
 import GameAdmin from "./pages/GameAdmin";
 import GameProgress from "./pages/GameProgress";
 import MakePick from "./pages/MakePick";
+import AdminPickEntry from "./pages/AdminPickEntry";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,6 +33,7 @@ const App = () => (
             <Route path="/games/:gameId/pick" element={<MakePick />} />
             <Route path="/games/:gameId/progress" element={<GameProgress />} />
             <Route path="/games/:gameId/admin" element={<GameAdmin />} />
+            <Route path="/admin/pick-entry" element={<AdminPickEntry />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

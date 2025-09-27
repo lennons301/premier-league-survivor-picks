@@ -495,6 +495,13 @@ export type Database = {
         Args: { p_game_id: string }
         Returns: string
       }
+      get_users_without_picks: {
+        Args: { p_game_id: string; p_gameweek: number }
+        Returns: {
+          display_name: string
+          user_id: string
+        }[]
+      }
       is_game_admin: {
         Args: { game_id: string }
         Returns: boolean

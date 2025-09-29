@@ -34,6 +34,7 @@ const GameAdmin = () => {
   const [newDeadline, setNewDeadline] = useState("");
   const [homeScore, setHomeScore] = useState("");
   const [awayScore, setAwayScore] = useState("");
+  const [adminFee, setAdminFee] = useState("");
 
   // State for remove player dialog
   const [removePlayerDialog, setRemovePlayerDialog] = useState<{
@@ -582,6 +583,46 @@ const GameAdmin = () => {
     }
   };
 
+  // Mutation to end game as split
+  const endGameAsSplitMutation = useMutation({
+    mutationFn: async (adminFeeAmount: number) => {
+      const { error } = await supabase.rpc('end_game_as_split', {
+        p_game_id: gameId,
+        p_admin_fee: adminFeeAmount
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Game ended as split",
+        description: "Prize pot has been split equally among remaining players",
+      });
+      queryClient.invalidateQueries({ queryKey: ["game", gameId] });
+      queryClient.invalidateQueries({ queryKey: ["game-players", gameId] });
+      setAdminFee("");
+    },
+    onError: (error) => {
+      toast({
+        title: "Error ending game",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleEndGameAsSplit = () => {
+    const fee = parseFloat(adminFee) || 0;
+    if (fee < 0) {
+      toast({
+        title: "Invalid admin fee",
+        description: "Admin fee cannot be negative",
+        variant: "destructive",
+      });
+      return;
+    }
+    endGameAsSplitMutation.mutate(fee);
+  };
+
   // Check if user is admin
   if (!user || !game || game.created_by !== user.id) {
     return (
@@ -671,6 +712,59 @@ const GameAdmin = () => {
                       >
                         <UserPlus className="h-4 w-4 mr-2" />
                         {createTestUsersMutation.isPending ? "Creating..." : "Create Test Users"}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <div>
+                    <Label>End Game as Split</Label>
+                    <p className="text-sm text-muted-foreground mt-1 mb-3">
+                      Split the prize pot equally among {players?.filter(p => !p.is_eliminated).length || 0} remaining players
+                    </p>
+                    <div className="space-y-3">
+                      <div>
+                        <Label htmlFor="adminFee">Admin Fee (£)</Label>
+                        <Input
+                          id="adminFee"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={adminFee}
+                          onChange={(e) => setAdminFee(e.target.value)}
+                          placeholder="0.00"
+                        />
+                      </div>
+                      <div className="p-3 bg-muted rounded-lg text-sm">
+                        <div className="flex justify-between mb-1">
+                          <span className="text-muted-foreground">Prize Pot:</span>
+                          <span className="font-semibold">£{game.entry_fee ? (players?.length || 0) * Number(game.entry_fee) : 0}</span>
+                        </div>
+                        <div className="flex justify-between mb-1">
+                          <span className="text-muted-foreground">Admin Fee:</span>
+                          <span className="font-semibold">-£{adminFee || "0.00"}</span>
+                        </div>
+                        <Separator className="my-2" />
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Split per player:</span>
+                          <span className="font-bold text-green-600">
+                            £{
+                              players?.filter(p => !p.is_eliminated).length
+                                ? ((((players?.length || 0) * Number(game.entry_fee || 0)) - (parseFloat(adminFee) || 0)) / players.filter(p => !p.is_eliminated).length).toFixed(2)
+                                : "0.00"
+                            }
+                          </span>
+                        </div>
+                      </div>
+                      <Button
+                        onClick={handleEndGameAsSplit}
+                        disabled={endGameAsSplitMutation.isPending || game.status === "finished" || !players?.some(p => !p.is_eliminated)}
+                        className="w-full"
+                        variant="destructive"
+                      >
+                        <Trophy className="h-4 w-4 mr-2" />
+                        {endGameAsSplitMutation.isPending ? "Ending Game..." : "End Game as Split"}
                       </Button>
                     </div>
                   </div>

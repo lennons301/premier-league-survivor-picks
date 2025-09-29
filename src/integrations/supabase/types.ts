@@ -181,8 +181,44 @@ export type Database = {
           },
         ]
       }
+      game_winners: {
+        Row: {
+          created_at: string | null
+          game_id: string
+          id: string
+          is_split: boolean | null
+          payout_amount: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          game_id: string
+          id?: string
+          is_split?: boolean | null
+          payout_amount: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          game_id?: string
+          id?: string
+          is_split?: boolean | null
+          payout_amount?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_winners_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       games: {
         Row: {
+          admin_fee: number | null
           created_at: string
           created_by: string
           current_deadline: string | null
@@ -197,6 +233,7 @@ export type Database = {
           winner_id: string | null
         }
         Insert: {
+          admin_fee?: number | null
           created_at?: string
           created_by: string
           current_deadline?: string | null
@@ -211,6 +248,7 @@ export type Database = {
           winner_id?: string | null
         }
         Update: {
+          admin_fee?: number | null
           created_at?: string
           created_by?: string
           current_deadline?: string | null
@@ -489,6 +527,10 @@ export type Database = {
       }
       eliminate_players_who_failed_to_rebuy: {
         Args: { p_gameweek_number: number }
+        Returns: undefined
+      }
+      end_game_as_split: {
+        Args: { p_admin_fee: number; p_game_id: string }
         Returns: undefined
       }
       get_game_winner: {

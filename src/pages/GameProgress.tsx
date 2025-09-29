@@ -32,25 +32,46 @@ export default function GameProgress() {
       const { data: prizePot } = await supabase
         .rpc("calculate_prize_pot", { p_game_id: gameId });
 
-      // Get winner if game is finished
+      // Get winner(s) if game is finished
       let winner = null;
+      let winners = null;
+      let isSplit = false;
       if (data.status === 'finished') {
-        const { data: winnerUserId } = await supabase
-          .rpc("get_game_winner", { p_game_id: gameId });
-        if (winnerUserId) {
-          const { data: winnerProfile } = await supabase
-            .from("profiles")
-            .select("display_name")
-            .eq("user_id", winnerUserId)
-            .single();
-          winner = winnerProfile;
+        // Check if there are split winners
+        const { data: splitWinners } = await supabase
+          .from("game_winners")
+          .select(`
+            user_id,
+            payout_amount,
+            is_split,
+            profiles:user_id (display_name)
+          `)
+          .eq("game_id", gameId);
+        
+        if (splitWinners && splitWinners.length > 0) {
+          winners = splitWinners;
+          isSplit = splitWinners[0].is_split;
+        } else {
+          // Fall back to single winner
+          const { data: winnerUserId } = await supabase
+            .rpc("get_game_winner", { p_game_id: gameId });
+          if (winnerUserId) {
+            const { data: winnerProfile } = await supabase
+              .from("profiles")
+              .select("display_name")
+              .eq("user_id", winnerUserId)
+              .single();
+            winner = winnerProfile;
+          }
         }
       }
 
       return { 
         ...data, 
         prize_pot: prizePot,
-        winner: winner
+        winner: winner,
+        winners: winners,
+        is_split: isSplit
       };
     },
   });
@@ -265,17 +286,35 @@ export default function GameProgress() {
           </CardContent>
         </Card>
 
-        {game.status === 'finished' && game.winner && (
+        {game.status === 'finished' && (game.winner || game.winners) && (
           <Card className="p-3 sm:p-6">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-0 sm:p-6">
-              <CardTitle className="text-xs sm:text-sm font-medium">Winner</CardTitle>
+              <CardTitle className="text-xs sm:text-sm font-medium">
+                {game.is_split ? 'Winners (Split)' : 'Winner'}
+              </CardTitle>
               <Crown className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-600" />
             </CardHeader>
             <CardContent className="p-0 sm:p-6">
-              <div className="text-lg sm:text-2xl font-bold text-yellow-600">{game.winner.display_name}</div>
-              <p className="text-[10px] sm:text-xs text-muted-foreground">
-                Congratulations!
-              </p>
+              {game.is_split && game.winners ? (
+                <div className="space-y-2">
+                  {game.winners.map((w: any) => (
+                    <div key={w.user_id} className="flex justify-between items-center">
+                      <span className="font-semibold text-yellow-600">{w.profiles?.display_name}</span>
+                      <span className="text-sm text-muted-foreground">£{Number(w.payout_amount).toFixed(2)}</span>
+                    </div>
+                  ))}
+                  <p className="text-[10px] sm:text-xs text-muted-foreground mt-2">
+                    Prize split equally among remaining players
+                  </p>
+                </div>
+              ) : game.winner ? (
+                <>
+                  <div className="text-lg sm:text-2xl font-bold text-yellow-600">{game.winner.display_name}</div>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">
+                    Congratulations!
+                  </p>
+                </>
+              ) : null}
             </CardContent>
           </Card>
         )}

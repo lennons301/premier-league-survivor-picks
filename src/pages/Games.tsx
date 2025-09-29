@@ -87,18 +87,37 @@ const Games = () => {
           const { data: prizePot } = await supabase
             .rpc("calculate_prize_pot", { p_game_id: game.id });
 
-          // Get winner if game is finished
+          // Get winner(s) if game is finished
           let winner = null;
+          let winners = null;
+          let isSplit = false;
           if (game.status === 'finished') {
-            const { data: winnerUserId } = await supabase
-              .rpc("get_game_winner", { p_game_id: game.id });
-            if (winnerUserId) {
-              const { data: winnerProfile } = await supabase
-                .from("profiles")
-                .select("display_name")
-                .eq("user_id", winnerUserId)
-                .single();
-              winner = winnerProfile;
+            // Check if there are split winners
+            const { data: splitWinners } = await supabase
+              .from("game_winners")
+              .select(`
+                user_id,
+                payout_amount,
+                is_split,
+                profiles:user_id (display_name)
+              `)
+              .eq("game_id", game.id);
+            
+            if (splitWinners && splitWinners.length > 0) {
+              winners = splitWinners;
+              isSplit = splitWinners[0].is_split;
+            } else {
+              // Fall back to single winner
+              const { data: winnerUserId } = await supabase
+                .rpc("get_game_winner", { p_game_id: game.id });
+              if (winnerUserId) {
+                const { data: winnerProfile } = await supabase
+                  .from("profiles")
+                  .select("display_name")
+                  .eq("user_id", winnerUserId)
+                  .single();
+                winner = winnerProfile;
+              }
             }
           }
           
@@ -106,7 +125,9 @@ const Games = () => {
             ...game, 
             creator: creatorData,
             prize_pot: prizePot,
-            winner: winner
+            winner: winner,
+            winners: winners,
+            is_split: isSplit
           };
         })
       );
@@ -135,18 +156,37 @@ const Games = () => {
           const { data: prizePot } = await supabase
             .rpc("calculate_prize_pot", { p_game_id: gamePlayer.games.id });
 
-          // Get winner if game is finished
+          // Get winner(s) if game is finished
           let winner = null;
+          let winners = null;
+          let isSplit = false;
           if (gamePlayer.games.status === 'finished') {
-            const { data: winnerUserId } = await supabase
-              .rpc("get_game_winner", { p_game_id: gamePlayer.games.id });
-            if (winnerUserId) {
-              const { data: winnerProfile } = await supabase
-                .from("profiles")
-                .select("display_name")
-                .eq("user_id", winnerUserId)
-                .single();
-              winner = winnerProfile;
+            // Check if there are split winners
+            const { data: splitWinners } = await supabase
+              .from("game_winners")
+              .select(`
+                user_id,
+                payout_amount,
+                is_split,
+                profiles:user_id (display_name)
+              `)
+              .eq("game_id", gamePlayer.games.id);
+            
+            if (splitWinners && splitWinners.length > 0) {
+              winners = splitWinners;
+              isSplit = splitWinners[0].is_split;
+            } else {
+              // Fall back to single winner
+              const { data: winnerUserId } = await supabase
+                .rpc("get_game_winner", { p_game_id: gamePlayer.games.id });
+              if (winnerUserId) {
+                const { data: winnerProfile } = await supabase
+                  .from("profiles")
+                  .select("display_name")
+                  .eq("user_id", winnerUserId)
+                  .single();
+                winner = winnerProfile;
+              }
             }
           }
 
@@ -190,6 +230,8 @@ const Games = () => {
               ...gamePlayer.games,
               prize_pot: prizePot,
               winner: winner,
+              winners: winners,
+              is_split: isSplit,
               current_pick: currentPick,
               current_deadline: currentDeadline
             }
@@ -271,13 +313,24 @@ const Games = () => {
                         </div>
                         <span>£{gamePlayer.games.prize_pot ? Number(gamePlayer.games.prize_pot).toFixed(2) : '0.00'}</span>
                       </div>
-                      {gamePlayer.games.status === 'finished' && gamePlayer.games.winner && (
-                        <div className="flex items-center justify-between">
+                      {gamePlayer.games.status === 'finished' && (gamePlayer.games.winner || gamePlayer.games.winners) && (
+                        <div className="flex flex-col gap-1">
                           <div className="flex items-center gap-1">
                             <Crown size={16} />
-                            <span>Winner</span>
+                            <span className="font-semibold">{gamePlayer.games.is_split ? 'Winners (Split)' : 'Winner'}</span>
                           </div>
-                          <span className="font-semibold text-yellow-600">{gamePlayer.games.winner.display_name}</span>
+                          {gamePlayer.games.is_split && gamePlayer.games.winners ? (
+                            <div className="space-y-1 ml-5">
+                              {gamePlayer.games.winners.map((w: any) => (
+                                <div key={w.user_id} className="flex justify-between text-sm">
+                                  <span className="text-yellow-600">{w.profiles?.display_name}</span>
+                                  <span className="text-muted-foreground">£{Number(w.payout_amount).toFixed(2)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : gamePlayer.games.winner ? (
+                            <span className="ml-5 font-semibold text-yellow-600">{gamePlayer.games.winner.display_name}</span>
+                          ) : null}
                         </div>
                       )}
                     </div>
@@ -360,13 +413,24 @@ const Games = () => {
                         </div>
                         <span>£{game.prize_pot ? Number(game.prize_pot).toFixed(2) : '0.00'}</span>
                       </div>
-                      {game.status === 'finished' && game.winner && (
-                        <div className="flex items-center justify-between">
+                      {game.status === 'finished' && (game.winner || game.winners) && (
+                        <div className="flex flex-col gap-1">
                           <div className="flex items-center gap-1">
                             <Crown size={16} />
-                            <span>Winner</span>
+                            <span className="font-semibold">{game.is_split ? 'Winners (Split)' : 'Winner'}</span>
                           </div>
-                          <span className="font-semibold text-yellow-600">{game.winner.display_name}</span>
+                          {game.is_split && game.winners ? (
+                            <div className="space-y-1 ml-5">
+                              {game.winners.map((w: any) => (
+                                <div key={w.user_id} className="flex justify-between text-sm">
+                                  <span className="text-yellow-600">{w.profiles?.display_name}</span>
+                                  <span className="text-muted-foreground">£{Number(w.payout_amount).toFixed(2)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : game.winner ? (
+                            <span className="ml-5 font-semibold text-yellow-600">{game.winner.display_name}</span>
+                          ) : null}
                         </div>
                       )}
                       <div className="flex items-center justify-between">

@@ -152,6 +152,17 @@ const GameAdmin = () => {
     enabled: !!game?.current_gameweek,
   });
 
+  const { data: prizePot } = useQuery({
+    queryKey: ['prizePot', gameId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .rpc('calculate_prize_pot', { p_game_id: gameId });
+      if (error) throw error;
+      return data as number;
+    },
+    enabled: !!gameId,
+  });
+
   // Mutations
   const createTestUsersMutation = useMutation({
     mutationFn: async () => {
@@ -739,7 +750,7 @@ const GameAdmin = () => {
                       <div className="p-3 bg-muted rounded-lg text-sm">
                         <div className="flex justify-between mb-1">
                           <span className="text-muted-foreground">Prize Pot:</span>
-                          <span className="font-semibold">£{game.entry_fee ? (players?.length || 0) * Number(game.entry_fee) : 0}</span>
+                          <span className="font-semibold">£{prizePot?.toFixed(2) || "0.00"}</span>
                         </div>
                         <div className="flex justify-between mb-1">
                           <span className="text-muted-foreground">Admin Fee:</span>
@@ -750,8 +761,8 @@ const GameAdmin = () => {
                           <span className="text-muted-foreground">Split per player:</span>
                           <span className="font-bold text-green-600">
                             £{
-                              players?.filter(p => !p.is_eliminated).length
-                                ? ((((players?.length || 0) * Number(game.entry_fee || 0)) - (parseFloat(adminFee) || 0)) / players.filter(p => !p.is_eliminated).length).toFixed(2)
+                              players?.filter(p => !p.is_eliminated).length && prizePot
+                                ? ((prizePot - (parseFloat(adminFee) || 0)) / players.filter(p => !p.is_eliminated).length).toFixed(2)
                                 : "0.00"
                             }
                           </span>

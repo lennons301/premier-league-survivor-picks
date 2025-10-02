@@ -9,7 +9,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/Navbar";
-import { Trophy, Users, Calendar, Target, UserPlus, Settings, Play, Clock } from "lucide-react";
+import { Trophy, Users, Calendar, Target, UserPlus, Settings, Play, Clock, Map } from "lucide-react";
 import { useState, useEffect } from "react";
 
 const GameDetail = () => {
@@ -379,11 +379,19 @@ const GameDetail = () => {
                   )}
                   
                   {myParticipation && (
-                    <Link to={`/games/${gameId}/progress`}>
-                      <Button variant="outline" className="w-full">
-                        View Progress
-                      </Button>
-                    </Link>
+                    <>
+                      <Link to={`/games/${gameId}/planner`}>
+                        <Button variant="outline" className="w-full">
+                          <Map size={16} className="mr-2" />
+                          Pick Planner
+                        </Button>
+                      </Link>
+                      <Link to={`/games/${gameId}/progress`}>
+                        <Button variant="outline" className="w-full">
+                          View Progress
+                        </Button>
+                      </Link>
+                    </>
                   )}
                   
                   {myParticipation && myParticipation.is_eliminated && (

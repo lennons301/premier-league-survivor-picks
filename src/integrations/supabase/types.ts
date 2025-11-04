@@ -494,10 +494,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      activate_gameweeks_past_deadline: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      activate_gameweeks_past_deadline: { Args: never; Returns: undefined }
       admin_insert_pick: {
         Args: {
           p_fixture_id: string
@@ -509,10 +506,7 @@ export type Database = {
         }
         Returns: string
       }
-      calculate_prize_pot: {
-        Args: { p_game_id: string }
-        Returns: number
-      }
+      calculate_prize_pot: { Args: { p_game_id: string }; Returns: number }
       check_all_picks_made: {
         Args: { p_game_id: string; p_gameweek_number: number }
         Returns: boolean
@@ -522,7 +516,7 @@ export type Database = {
         Returns: undefined
       }
       eliminate_non_winners_after_first_gameweek: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: undefined
       }
       eliminate_players_who_failed_to_rebuy: {
@@ -533,10 +527,7 @@ export type Database = {
         Args: { p_admin_fee: number; p_game_id: string }
         Returns: undefined
       }
-      get_game_winner: {
-        Args: { p_game_id: string }
-        Returns: string
-      }
+      get_game_winner: { Args: { p_game_id: string }; Returns: string }
       get_users_without_picks: {
         Args: { p_game_id: string; p_gameweek: number }
         Returns: {
@@ -544,10 +535,7 @@ export type Database = {
           user_id: string
         }[]
       }
-      is_game_admin: {
-        Args: { game_id: string }
-        Returns: boolean
-      }
+      is_game_admin: { Args: { game_id: string }; Returns: boolean }
       manually_activate_gameweek: {
         Args: { p_game_id: string; p_gameweek_number: number }
         Returns: undefined

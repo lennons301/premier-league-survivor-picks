@@ -26,23 +26,27 @@ const CreateGame = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Fetch next available gameweek
+  // Fetch next available gameweek (one after current, with deadline in the future)
   const { data: nextGameweek } = useQuery({
-    queryKey: ["next-gameweek"],
+    queryKey: ["next-gameweek-for-new-game"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const now = new Date().toISOString();
+      
+      // Get the first gameweek with a deadline in the future, ordered by gameweek number
+      const { data: futureGameweeks, error } = await supabase
         .from("gameweeks")
         .select("*")
-        .eq("is_next", true)
-        .single();
+        .gt("deadline", now)
+        .order("gameweek_number", { ascending: true })
+        .limit(2);
       
-      if (error) {
-        // If no next gameweek, get current + 1
+      if (error || !futureGameweeks || futureGameweeks.length === 0) {
+        // Fallback: get current gameweek + 1
         const { data: currentData } = await supabase
           .from("gameweeks")
           .select("*")
           .eq("is_current", true)
-          .single();
+          .maybeSingle();
         
         if (currentData) {
           return {
@@ -57,7 +61,13 @@ const CreateGame = () => {
         };
       }
       
-      return data;
+      // If the first future gameweek is the current one (is_current = true), use the next one
+      // This ensures we default to the gameweek AFTER the current active one
+      if (futureGameweeks[0].is_current && futureGameweeks.length > 1) {
+        return futureGameweeks[1];
+      }
+      
+      return futureGameweeks[0];
     },
   });
   

@@ -219,11 +219,13 @@ export type Database = {
       games: {
         Row: {
           admin_fee: number | null
+          allow_rebuys: boolean
           created_at: string
           created_by: string
           current_deadline: string | null
           current_gameweek: number | null
           entry_fee: number
+          game_mode: string
           id: string
           max_players: number | null
           name: string
@@ -234,11 +236,13 @@ export type Database = {
         }
         Insert: {
           admin_fee?: number | null
+          allow_rebuys?: boolean
           created_at?: string
           created_by: string
           current_deadline?: string | null
           current_gameweek?: number | null
           entry_fee?: number
+          game_mode?: string
           id?: string
           max_players?: number | null
           name: string
@@ -249,11 +253,13 @@ export type Database = {
         }
         Update: {
           admin_fee?: number | null
+          allow_rebuys?: boolean
           created_at?: string
           created_by?: string
           current_deadline?: string | null
           current_gameweek?: number | null
           entry_fee?: number
+          game_mode?: string
           id?: string
           max_players?: number | null
           name?: string
@@ -356,11 +362,14 @@ export type Database = {
           fixture_id: string | null
           game_id: string
           gameweek: number
+          goals_scored: number | null
           id: string
           is_captain: boolean | null
           is_vice_captain: boolean | null
           multiplier: number | null
           picked_side: string | null
+          predicted_result: string | null
+          preference_order: number | null
           result: string | null
           team_id: string
           user_id: string
@@ -370,11 +379,14 @@ export type Database = {
           fixture_id?: string | null
           game_id: string
           gameweek: number
+          goals_scored?: number | null
           id?: string
           is_captain?: boolean | null
           is_vice_captain?: boolean | null
           multiplier?: number | null
           picked_side?: string | null
+          predicted_result?: string | null
+          preference_order?: number | null
           result?: string | null
           team_id: string
           user_id: string
@@ -384,11 +396,14 @@ export type Database = {
           fixture_id?: string | null
           game_id?: string
           gameweek?: number
+          goals_scored?: number | null
           id?: string
           is_captain?: boolean | null
           is_vice_captain?: boolean | null
           multiplier?: number | null
           picked_side?: string | null
+          predicted_result?: string | null
+          preference_order?: number | null
           result?: string | null
           team_id?: string
           user_id?: string

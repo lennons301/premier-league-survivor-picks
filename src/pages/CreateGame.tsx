@@ -10,15 +10,20 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import Navbar from "@/components/Navbar";
-import { Trophy, Settings } from "lucide-react";
+import { Trophy, Settings, Zap, TrendingUp, Shield } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
+import { Switch } from "@/components/ui/switch";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 
 const formSchema = z.object({
   name: z.string().min(1, "Game name is required"),
   max_players: z.number().min(2, "At least 2 players required").optional(),
   starting_gameweek: z.number().min(1, "Starting gameweek must be at least 1").max(38, "Starting gameweek cannot exceed 38"),
   deadline: z.string().min(1, "Pick deadline is required"),
+  game_mode: z.enum(["classic", "escalating", "turbo"]),
+  allow_rebuys: z.boolean(),
 });
 
 const CreateGame = () => {
@@ -78,8 +83,12 @@ const CreateGame = () => {
       max_players: undefined,
       starting_gameweek: nextGameweek?.gameweek_number || 1,
       deadline: nextGameweek?.deadline?.slice(0, 16) || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16),
+      game_mode: "classic",
+      allow_rebuys: true,
     },
   });
+
+  const selectedGameMode = form.watch("game_mode");
 
   // Update form values when nextGameweek data loads
   useEffect(() => {
@@ -102,6 +111,8 @@ const CreateGame = () => {
           current_gameweek: values.starting_gameweek,
           created_by: user.id,
           status: 'active',
+          game_mode: values.game_mode,
+          allow_rebuys: values.game_mode === "turbo" ? false : values.allow_rebuys,
         })
         .select()
         .single();
@@ -254,6 +265,88 @@ const CreateGame = () => {
                     </FormItem>
                   )}
                 />
+
+                {/* Game Mode Selection */}
+                <FormField
+                  control={form.control}
+                  name="game_mode"
+                  render={({ field }) => (
+                    <FormItem className="space-y-3">
+                      <FormLabel>Game Mode</FormLabel>
+                      <FormControl>
+                        <RadioGroup
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                          className="grid gap-3"
+                        >
+                          <div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                            <RadioGroupItem value="classic" id="classic" className="mt-1" />
+                            <div className="flex-1">
+                              <Label htmlFor="classic" className="flex items-center gap-2 cursor-pointer">
+                                <Shield className="h-4 w-4 text-blue-500" />
+                                <span className="font-medium">Classic</span>
+                              </Label>
+                              <p className="text-sm text-muted-foreground mt-1">
+                                Pick one team per gameweek. Last player standing wins.
+                              </p>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                            <RadioGroupItem value="escalating" id="escalating" className="mt-1" />
+                            <div className="flex-1">
+                              <Label htmlFor="escalating" className="flex items-center gap-2 cursor-pointer">
+                                <TrendingUp className="h-4 w-4 text-amber-500" />
+                                <span className="font-medium">Escalating</span>
+                              </Label>
+                              <p className="text-sm text-muted-foreground mt-1">
+                                1 pick in GW1, 2 picks in GW2, etc. Any wrong pick eliminates. Tiebreaker: most correct picks, then goals scored.
+                              </p>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                            <RadioGroupItem value="turbo" id="turbo" className="mt-1" />
+                            <div className="flex-1">
+                              <Label htmlFor="turbo" className="flex items-center gap-2 cursor-pointer">
+                                <Zap className="h-4 w-4 text-yellow-500" />
+                                <span className="font-medium">Turbo</span>
+                              </Label>
+                              <p className="text-sm text-muted-foreground mt-1">
+                                Single gameweek showdown. Rank all fixtures by confidence. Most consecutive correct predictions wins. No rebuys.
+                              </p>
+                            </div>
+                          </div>
+                        </RadioGroup>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Allow Rebuys Toggle (only for classic and escalating) */}
+                {selectedGameMode !== "turbo" && (
+                  <FormField
+                    control={form.control}
+                    name="allow_rebuys"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-base">Allow Rebuys</FormLabel>
+                          <FormDescription>
+                            Players can re-enter after elimination in the first gameweek
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                )}
 
                 <div className="bg-muted p-4 rounded-lg">
                   <h3 className="font-semibold mb-2">Admin Features</h3>

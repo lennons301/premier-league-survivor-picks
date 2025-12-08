@@ -9,7 +9,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/Navbar";
-import { Trophy, Users, Calendar, Target, UserPlus, Settings, Play, Clock } from "lucide-react";
+import { Trophy, Users, Calendar, Target, UserPlus, Settings, Play, Clock, Zap, TrendingUp, Shield } from "lucide-react";
 import { useState, useEffect } from "react";
 
 const GameDetail = () => {
@@ -322,6 +322,15 @@ const GameDetail = () => {
                   <span className="text-muted-foreground">Current Gameweek</span>
                   <span className="font-semibold">{game.current_gameweek}</span>
                 </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Game Mode</span>
+                  <Badge variant="outline" className="flex items-center gap-1">
+                    {game.game_mode === "turbo" && <Zap className="h-3 w-3 text-yellow-500" />}
+                    {game.game_mode === "escalating" && <TrendingUp className="h-3 w-3 text-amber-500" />}
+                    {game.game_mode === "classic" && <Shield className="h-3 w-3 text-blue-500" />}
+                    {game.game_mode || "classic"}
+                  </Badge>
+                </div>
                 {timeRemaining && game.status === "active" && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Pick Deadline</span>
@@ -370,9 +379,18 @@ const GameDetail = () => {
                   )}
                   
                   {myParticipation && !myParticipation.is_eliminated && game.status === "active" && (
-                    <Link to={`/games/${gameId}/pick`}>
+                    <Link to={
+                      game.game_mode === "turbo" 
+                        ? `/games/${gameId}/turbo-pick` 
+                        : game.game_mode === "escalating"
+                        ? `/games/${gameId}/escalating-pick`
+                        : `/games/${gameId}/pick`
+                    }>
                       <Button className="w-full">
-                        <Play size={16} className="mr-2" />
+                        {game.game_mode === "turbo" && <Zap size={16} className="mr-2" />}
+                        {game.game_mode === "escalating" && <TrendingUp size={16} className="mr-2" />}
+                        {game.game_mode === "classic" && <Play size={16} className="mr-2" />}
+                        {!game.game_mode && <Play size={16} className="mr-2" />}
                         {currentPick ? `Edit Pick for GW ${game.current_gameweek}` : `Make Pick for GW ${game.current_gameweek}`}
                       </Button>
                     </Link>

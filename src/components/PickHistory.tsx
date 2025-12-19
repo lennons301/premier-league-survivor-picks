@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PlayerProgressTable from "@/components/PlayerProgressTable";
+import TurboLeaderboard from "@/components/TurboLeaderboard";
+import EscalatingLeaderboard from "@/components/EscalatingLeaderboard";
 
 interface Pick {
   id: string;
@@ -15,6 +17,9 @@ interface Pick {
   picked_side: string;
   result: string | null;
   multiplier?: number;
+  preference_order?: number | null;
+  predicted_result?: string | null;
+  goals_scored?: number | null;
   fixtures: {
     home_team: { name: string; short_name: string };
     away_team: { name: string; short_name: string };
@@ -46,6 +51,7 @@ interface GameGameweek {
 
 interface Game {
   starting_gameweek?: number;
+  game_mode?: string;
 }
 
 interface PickHistoryProps {
@@ -245,24 +251,47 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
     );
   }
 
+  // Determine which leaderboard to show based on game mode
+  const gameMode = game?.game_mode || 'classic';
+
   return (
     <div className="space-y-6">
       <Card>
         <CardContent className="pt-6">
           <Tabs defaultValue="pivot" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="pivot">Player Progress</TabsTrigger>
+              <TabsTrigger value="pivot">
+                {gameMode === 'turbo' ? 'Turbo Leaderboard' : 
+                 gameMode === 'escalating' ? 'Escalating Leaderboard' : 
+                 'Player Progress'}
+              </TabsTrigger>
               <TabsTrigger value="overview">GW History</TabsTrigger>
             </TabsList>
 
             <TabsContent value="pivot" className="space-y-4">
-              <PlayerProgressTable 
-                pivotData={pivotData}
-                gameGameweeks={gameGameweeks || []}
-                currentGameweek={currentGameweek}
-                gameGameweek={gameGameweek}
-                allPicks={allPicks}
-              />
+              {gameMode === 'turbo' ? (
+                <TurboLeaderboard
+                  allPicks={allPicks}
+                  gamePlayers={gamePlayers}
+                  currentGameweek={currentGameweek}
+                />
+              ) : gameMode === 'escalating' ? (
+                <EscalatingLeaderboard
+                  allPicks={allPicks}
+                  gamePlayers={gamePlayers}
+                  gameGameweeks={gameGameweeks || []}
+                  startingGameweek={game?.starting_gameweek || 1}
+                  currentGameweek={currentGameweek}
+                />
+              ) : (
+                <PlayerProgressTable 
+                  pivotData={pivotData}
+                  gameGameweeks={gameGameweeks || []}
+                  currentGameweek={currentGameweek}
+                  gameGameweek={gameGameweek}
+                  allPicks={allPicks}
+                />
+              )}
             </TabsContent>
 
             <TabsContent value="overview" className="space-y-4">

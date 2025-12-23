@@ -23,10 +23,10 @@ const AdminPickEntry = () => {
       const { data, error } = await supabase.rpc('admin_insert_pick', {
         p_game_id: '15597efe-565a-44ce-8c6a-1644a22aa2bd', // LPS 3 2025
         p_user_id: 'db833f23-47b3-4dd9-8ce1-0791db5ce062', // Sarit
-        p_fixture_id: 'ab8d0d7e-ecf5-4efa-bac8-356da9785c6e', // Man City vs West Ham
+        p_fixture_id: '4cda57b8-c611-4c2b-8775-9df8ed6c9ed3', // Crystal Palace vs Man City
         p_team_id: 'a1f16a7a-6548-4df5-9cd5-045a9ab0c979', // Man City
-        p_picked_side: 'home',
-        p_gameweek: 17
+        p_picked_side: 'away',
+        p_gameweek: 16
       });
       
       if (error) throw error;
@@ -62,8 +62,8 @@ const AdminPickEntry = () => {
           <div className="text-sm space-y-2">
             <p><strong>Game:</strong> LPS 3 2025</p>
             <p><strong>User:</strong> Sarit</p>
-            <p><strong>Gameweek:</strong> 17</p>
-            <p><strong>Pick:</strong> Man City (Home) vs West Ham</p>
+            <p><strong>Gameweek:</strong> 16</p>
+            <p><strong>Pick:</strong> Man City (Away) vs Crystal Palace</p>
             <p><strong>Result:</strong> Win with 3 goals</p>
           </div>
           

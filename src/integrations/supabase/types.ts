@@ -530,6 +530,10 @@ export type Database = {
         Args: { p_gameweek_number: number }
         Returns: undefined
       }
+      check_and_finish_turbo_games: {
+        Args: { p_gameweek_number: number }
+        Returns: undefined
+      }
       eliminate_non_winners_after_first_gameweek: {
         Args: never
         Returns: undefined

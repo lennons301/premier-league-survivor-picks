@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +8,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useFPLSync } from "@/hooks/useFPLSync";
-import { ArrowLeft, Clock, Zap, GripVertical } from "lucide-react";
+import { ArrowLeft, Clock, Zap, GripVertical, ChevronUp, ChevronDown } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 
@@ -30,6 +30,11 @@ export default function TurboPick() {
   const [fixtureOrder, setFixtureOrder] = useState<string[]>([]);
   const [timeRemaining, setTimeRemaining] = useState<string>("");
   const [draggedItem, setDraggedItem] = useState<string | null>(null);
+  
+  // Touch drag state
+  const touchStartY = useRef<number>(0);
+  const touchedItemRef = useRef<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Fetch game details
   const { data: game } = useQuery({
@@ -230,6 +235,30 @@ export default function TurboPick() {
     );
   };
 
+  // Move fixture up or down in order (for mobile/accessibility)
+  const moveFixture = useCallback((fixtureId: string, direction: "up" | "down") => {
+    setFixtureOrder(prev => {
+      const newOrder = [...prev];
+      const currentIndex = newOrder.indexOf(fixtureId);
+      
+      if (direction === "up" && currentIndex > 0) {
+        [newOrder[currentIndex], newOrder[currentIndex - 1]] = [newOrder[currentIndex - 1], newOrder[currentIndex]];
+      } else if (direction === "down" && currentIndex < newOrder.length - 1) {
+        [newOrder[currentIndex], newOrder[currentIndex + 1]] = [newOrder[currentIndex + 1], newOrder[currentIndex]];
+      }
+      
+      return newOrder;
+    });
+    
+    // Update preference orders after move
+    setPredictions(prev => 
+      prev.map(p => ({
+        ...p,
+        preferenceOrder: fixtureOrder.indexOf(p.fixtureId) + 1
+      }))
+    );
+  }, [fixtureOrder]);
+
   const submitPicksMutation = useMutation({
     mutationFn: async () => {
       if (!user?.id || !game || !fixtures?.length) {
@@ -338,12 +367,14 @@ export default function TurboPick() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
+          <div className="space-y-3" ref={containerRef}>
             {fixtureOrder.map((fixtureId, index) => {
               const fixture = fixtures.find(f => f.id === fixtureId);
               if (!fixture) return null;
               
               const prediction = predictions.find(p => p.fixtureId === fixtureId);
+              const isFirst = index === 0;
+              const isLast = index === fixtureOrder.length - 1;
 
               return (
                 <div
@@ -352,50 +383,85 @@ export default function TurboPick() {
                   onDragStart={() => handleDragStart(fixtureId)}
                   onDragOver={(e) => handleDragOver(e, fixtureId)}
                   onDragEnd={handleDragEnd}
-                  className={`border rounded-lg p-4 transition-all ${
+                  className={`border rounded-lg p-4 transition-all bg-card ${
                     draggedItem === fixtureId ? "opacity-50 scale-95" : ""
-                  } ${!isDeadlinePassed ? "cursor-grab active:cursor-grabbing" : ""}`}
+                  }`}
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 sm:gap-4">
+                    {/* Reorder controls - visible buttons for mobile, drag handle for desktop */}
+                    <div className="flex flex-col items-center gap-1">
                       {!isDeadlinePassed && (
-                        <GripVertical className="h-5 w-5 text-muted-foreground" />
+                        <>
+                          {/* Mobile reorder buttons */}
+                          <div className="flex flex-col sm:hidden">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0"
+                              onClick={() => moveFixture(fixtureId, "up")}
+                              disabled={isFirst}
+                            >
+                              <ChevronUp className="h-4 w-4" />
+                            </Button>
+                            <Badge variant="outline" className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs">
+                              {index + 1}
+                            </Badge>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0"
+                              onClick={() => moveFixture(fixtureId, "down")}
+                              disabled={isLast}
+                            >
+                              <ChevronDown className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          {/* Desktop drag handle */}
+                          <div className="hidden sm:flex items-center gap-2 cursor-grab active:cursor-grabbing">
+                            <GripVertical className="h-5 w-5 text-muted-foreground" />
+                            <Badge variant="outline" className="w-8 h-8 rounded-full flex items-center justify-center font-bold">
+                              {index + 1}
+                            </Badge>
+                          </div>
+                        </>
                       )}
-                      <Badge variant="outline" className="w-8 h-8 rounded-full flex items-center justify-center font-bold">
-                        {index + 1}
-                      </Badge>
+                      {isDeadlinePassed && (
+                        <Badge variant="outline" className="w-8 h-8 rounded-full flex items-center justify-center font-bold">
+                          {index + 1}
+                        </Badge>
+                      )}
                     </div>
                     
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full overflow-hidden bg-white flex items-center justify-center border">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 gap-2">
+                        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full overflow-hidden bg-white flex items-center justify-center border flex-shrink-0">
                             {fixture.home_team?.code ? (
                               <img 
                                 src={`https://resources.premierleague.com/premierleague/badges/70/t${fixture.home_team.code}.png`}
                                 alt={fixture.home_team.name}
-                                className="w-6 h-6 object-contain"
+                                className="w-5 h-5 sm:w-6 sm:h-6 object-contain"
                               />
                             ) : (
                               <span className="text-xs font-bold">{fixture.home_team?.short_name}</span>
                             )}
                           </div>
-                          <span className="font-medium">{fixture.home_team?.short_name}</span>
-                          <span className="text-muted-foreground">vs</span>
-                          <span className="font-medium">{fixture.away_team?.short_name}</span>
-                          <div className="w-8 h-8 rounded-full overflow-hidden bg-white flex items-center justify-center border">
+                          <span className="font-medium text-sm sm:text-base">{fixture.home_team?.short_name}</span>
+                          <span className="text-muted-foreground text-sm">vs</span>
+                          <span className="font-medium text-sm sm:text-base">{fixture.away_team?.short_name}</span>
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full overflow-hidden bg-white flex items-center justify-center border flex-shrink-0">
                             {fixture.away_team?.code ? (
                               <img 
                                 src={`https://resources.premierleague.com/premierleague/badges/70/t${fixture.away_team.code}.png`}
                                 alt={fixture.away_team.name}
-                                className="w-6 h-6 object-contain"
+                                className="w-5 h-5 sm:w-6 sm:h-6 object-contain"
                               />
                             ) : (
                               <span className="text-xs font-bold">{fixture.away_team?.short_name}</span>
                             )}
                           </div>
                         </div>
-                        <span className="text-sm text-muted-foreground">
+                        <span className="text-xs sm:text-sm text-muted-foreground">
                           {new Date(fixture.kickoff_time).toLocaleDateString("en-GB", {
                             weekday: "short",
                             day: "numeric",
@@ -408,23 +474,23 @@ export default function TurboPick() {
                         value={prediction?.prediction || ""}
                         onValueChange={(value) => updatePrediction(fixtureId, value as "home_win" | "away_win" | "draw")}
                         disabled={isDeadlinePassed}
-                        className="flex gap-4"
+                        className="flex flex-wrap gap-2 sm:gap-4"
                       >
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-1 sm:space-x-2">
                           <RadioGroupItem value="home_win" id={`${fixtureId}-home`} />
-                          <Label htmlFor={`${fixtureId}-home`} className="cursor-pointer">
+                          <Label htmlFor={`${fixtureId}-home`} className="cursor-pointer text-xs sm:text-sm">
                             {fixture.home_team?.short_name} Win
                           </Label>
                         </div>
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-1 sm:space-x-2">
                           <RadioGroupItem value="draw" id={`${fixtureId}-draw`} />
-                          <Label htmlFor={`${fixtureId}-draw`} className="cursor-pointer">
+                          <Label htmlFor={`${fixtureId}-draw`} className="cursor-pointer text-xs sm:text-sm">
                             Draw
                           </Label>
                         </div>
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-1 sm:space-x-2">
                           <RadioGroupItem value="away_win" id={`${fixtureId}-away`} />
-                          <Label htmlFor={`${fixtureId}-away`} className="cursor-pointer">
+                          <Label htmlFor={`${fixtureId}-away`} className="cursor-pointer text-xs sm:text-sm">
                             {fixture.away_team?.short_name} Win
                           </Label>
                         </div>

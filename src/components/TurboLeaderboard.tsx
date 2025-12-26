@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Trophy, Zap, Target, Download, Loader2 } from "lucide-react";
+import { Trophy, Zap, Download, Loader2 } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import html2canvas from "html2canvas";
 import { toast } from "sonner";
@@ -35,20 +35,28 @@ interface TurboLeaderboardProps {
   allPicks: Pick[];
   gamePlayers: GamePlayer[];
   currentGameweek: number;
+  gameweekStatus?: 'open' | 'active' | 'finished' | 'upcoming';
 }
 
 interface PlayerTurboStats {
   userId: string;
   displayName: string;
   consecutiveCorrect: number;
-  totalCorrect: number;
   goalsInCorrectPicks: number;
-  picks: Pick[];
+  picks: (Pick | null)[];
 }
 
-export default function TurboLeaderboard({ allPicks, gamePlayers, currentGameweek }: TurboLeaderboardProps) {
+export default function TurboLeaderboard({ 
+  allPicks, 
+  gamePlayers, 
+  currentGameweek,
+  gameweekStatus = 'open'
+}: TurboLeaderboardProps) {
   const gridRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
+
+  // Picks should be visible only when gameweek is active or finished
+  const picksAreVisible = gameweekStatus === 'active' || gameweekStatus === 'finished';
 
   const leaderboardData = useMemo(() => {
     const playerStats: PlayerTurboStats[] = gamePlayers.map(player => {
@@ -61,30 +69,27 @@ export default function TurboLeaderboard({ allPicks, gamePlayers, currentGamewee
       let goalsInCorrectPicks = 0;
       
       for (const pick of userPicks) {
-        // Use the result field directly - 'win' means correct prediction
         if (pick.result === 'win') {
           consecutiveCorrect++;
-          // Add goals - for draws, goals_scored already includes both teams' goals
           goalsInCorrectPicks += pick.goals_scored || 0;
         } else if (pick.result === 'loss' || pick.result === 'draw') {
-          // Streak broken
           break;
         } else {
-          // Result is null - fixture not completed yet, stop counting
           break;
         }
       }
 
-      // Count total correct picks using result field
-      const totalCorrect = userPicks.filter(pick => pick.result === 'win').length;
+      // Create array of 10 picks (filled with actual picks or null)
+      const picks: (Pick | null)[] = Array.from({ length: 10 }, (_, i) => {
+        return userPicks.find(p => (p.preference_order || 0) === i + 1) || null;
+      });
 
       return {
         userId: player.user_id,
         displayName: player.profiles?.display_name || 'Unknown',
         consecutiveCorrect,
-        totalCorrect,
         goalsInCorrectPicks,
-        picks: userPicks
+        picks
       };
     });
 
@@ -127,9 +132,6 @@ export default function TurboLeaderboard({ allPicks, gamePlayers, currentGamewee
     }
   };
 
-  // Get the max number of picks any player has made (up to 10)
-  const maxPicks = Math.min(10, Math.max(...leaderboardData.map(p => p.picks.length), 1));
-
   if (leaderboardData.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
@@ -138,30 +140,47 @@ export default function TurboLeaderboard({ allPicks, gamePlayers, currentGamewee
     );
   }
 
-  const getPickCellContent = (pick: Pick | undefined) => {
-    if (!pick) return { label: '-', className: 'bg-muted/30 text-muted-foreground' };
+  const getPickCellContent = (pick: Pick | null, isVisible: boolean) => {
+    // If picks aren't visible yet (deadline not passed), show "?"
+    if (!isVisible) {
+      return { label: '?', className: 'bg-muted/50 text-muted-foreground' };
+    }
     
-    const teamShort = pick.picked_side === 'home' 
-      ? pick.fixtures?.home_team?.short_name 
-      : pick.fixtures?.away_team?.short_name;
+    if (!pick) {
+      return { label: '-', className: 'bg-muted/30 text-muted-foreground' };
+    }
+    
+    // Get team short name based on pick type
+    let teamShort: string | undefined;
+    if (pick.predicted_result === 'draw') {
+      teamShort = 'D';
+    } else {
+      teamShort = pick.picked_side === 'home' 
+        ? pick.fixtures?.home_team?.short_name 
+        : pick.fixtures?.away_team?.short_name;
+    }
     
     if (pick.result === 'win') {
-      return { label: teamShort || '?', className: 'bg-green-500/80 text-white font-semibold' };
+      return { label: teamShort || '?', className: 'bg-green-600 text-white font-semibold' };
     } else if (pick.result === 'loss' || pick.result === 'draw') {
-      return { label: teamShort || '?', className: 'bg-red-500/80 text-white font-semibold' };
+      return { label: teamShort || '?', className: 'bg-red-600 text-white font-semibold' };
     } else {
       // Pending - fixture not complete
-      return { label: teamShort || '?', className: 'bg-muted text-muted-foreground' };
+      return { label: teamShort || '?', className: 'bg-muted text-foreground' };
     }
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
+      {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2">
-          <Zap className="h-5 w-5 text-yellow-500" />
-          <h3 className="text-lg font-semibold">Turbo Leaderboard</h3>
-          <Badge variant="outline" className="ml-2">GW{currentGameweek}</Badge>
+          <Zap className="h-4 w-4 text-yellow-500" />
+          <h3 className="text-base font-semibold">Turbo Leaderboard</h3>
+          <Badge variant="outline" className="text-xs">GW{currentGameweek}</Badge>
+          {gameweekStatus === 'open' && (
+            <Badge variant="secondary" className="text-xs">Picks Hidden</Badge>
+          )}
         </div>
         
         <Button 
@@ -169,107 +188,118 @@ export default function TurboLeaderboard({ allPicks, gamePlayers, currentGamewee
           size="sm" 
           onClick={handleExportPng}
           disabled={isExporting}
-          className="gap-2"
+          className="gap-1.5 h-8 text-xs"
         >
           {isExporting ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Loader2 className="h-3 w-3 animate-spin" />
           ) : (
-            <Download className="h-4 w-4" />
+            <Download className="h-3 w-3" />
           )}
-          Export PNG
+          PNG
         </Button>
       </div>
       
-      <p className="text-sm text-muted-foreground">
-        Ranked by consecutive correct predictions. Goals scored as tiebreaker.
+      <p className="text-xs text-muted-foreground">
+        Ranked by consecutive correct predictions. Goals as tiebreaker.
       </p>
 
-      {/* Exportable Grid */}
+      {/* Scrollable Grid - optimized for mobile */}
       <div 
         ref={gridRef} 
-        className="rounded-lg border bg-card p-3 overflow-x-auto"
+        className="rounded-lg border bg-card overflow-x-auto"
       >
-        {/* Header with pick numbers */}
-        <div className="flex min-w-max">
-          <div className="w-24 sm:w-32 shrink-0 p-2 font-semibold text-xs sm:text-sm border-b border-r">
-            Player
+        <div className="min-w-max">
+          {/* Header row */}
+          <div className="flex border-b bg-muted/30">
+            <div className="w-20 sm:w-28 shrink-0 px-2 py-1.5 font-medium text-xs border-r">
+              Player
+            </div>
+            <div className="w-8 sm:w-10 shrink-0 px-1 py-1.5 text-center font-medium text-xs border-r" title="Streak">
+              🔥
+            </div>
+            <div className="w-8 sm:w-10 shrink-0 px-1 py-1.5 text-center font-medium text-xs border-r" title="Goals">
+              ⚽
+            </div>
+            {Array.from({ length: 10 }, (_, i) => (
+              <div 
+                key={i} 
+                className="w-9 sm:w-11 shrink-0 px-1 py-1.5 text-center font-medium text-xs"
+              >
+                {i + 1}
+              </div>
+            ))}
           </div>
-          <div className="w-14 shrink-0 p-2 text-center font-semibold text-xs sm:text-sm border-b border-r">
-            <Target className="h-3 w-3 sm:h-4 sm:w-4 mx-auto" />
-          </div>
-          <div className="w-12 shrink-0 p-2 text-center font-semibold text-xs sm:text-sm border-b border-r" title="Goals">
-            ⚽
-          </div>
-          {Array.from({ length: maxPicks }, (_, i) => (
+
+          {/* Player rows */}
+          {leaderboardData.map((player, index) => (
             <div 
-              key={i} 
-              className="w-12 sm:w-14 shrink-0 p-2 text-center font-semibold text-xs sm:text-sm border-b"
+              key={player.userId} 
+              className={`flex border-b last:border-b-0 ${index === 0 ? 'bg-yellow-500/10' : index % 2 === 0 ? 'bg-muted/5' : ''}`}
             >
-              {i + 1}
+              {/* Player name with rank */}
+              <div className="w-20 sm:w-28 shrink-0 px-2 py-1 border-r flex items-center gap-1">
+                {index === 0 ? (
+                  <Trophy className="h-3 w-3 text-yellow-500 shrink-0" />
+                ) : (
+                  <span className="w-3 text-center text-[10px] text-muted-foreground shrink-0">{index + 1}</span>
+                )}
+                <span className="truncate text-xs font-medium">{player.displayName}</span>
+              </div>
+              
+              {/* Streak count */}
+              <div className="w-8 sm:w-10 shrink-0 px-1 py-1 text-center border-r flex items-center justify-center">
+                <span className={`text-xs font-bold ${player.consecutiveCorrect >= 5 ? "text-green-500" : player.consecutiveCorrect > 0 ? "text-foreground" : "text-muted-foreground"}`}>
+                  {player.consecutiveCorrect}
+                </span>
+              </div>
+              
+              {/* Goals tiebreaker */}
+              <div className="w-8 sm:w-10 shrink-0 px-1 py-1 text-center text-xs text-muted-foreground border-r flex items-center justify-center">
+                {player.goalsInCorrectPicks}
+              </div>
+
+              {/* Pick cells 1-10 */}
+              {player.picks.map((pick, i) => {
+                const { label, className } = getPickCellContent(pick, picksAreVisible);
+                
+                return (
+                  <div 
+                    key={i} 
+                    className="w-9 sm:w-11 shrink-0 p-0.5 flex items-center justify-center"
+                  >
+                    <div 
+                      className={`w-full h-6 sm:h-7 flex items-center justify-center text-[10px] sm:text-xs rounded ${className}`}
+                      title={pick?.fixtures ? `${pick.fixtures.home_team.short_name} vs ${pick.fixtures.away_team.short_name}` : undefined}
+                    >
+                      {label}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           ))}
         </div>
 
-        {/* Player rows */}
-        {leaderboardData.map((player, index) => (
-          <div key={player.userId} className="flex min-w-max">
-            {/* Player name with rank */}
-            <div className={`w-24 sm:w-32 shrink-0 p-2 border-r flex items-center gap-1 text-xs sm:text-sm ${index === 0 ? 'bg-yellow-500/10' : ''}`}>
-              {index === 0 ? (
-                <Trophy className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-500 shrink-0" />
-              ) : (
-                <span className="w-3 sm:w-4 text-center text-muted-foreground shrink-0">{index + 1}</span>
-              )}
-              <span className="truncate font-medium">{player.displayName}</span>
-            </div>
-            
-            {/* Streak count */}
-            <div className={`w-14 shrink-0 p-2 text-center border-r ${index === 0 ? 'bg-yellow-500/10' : ''}`}>
-              <Badge 
-                variant={player.consecutiveCorrect > 0 ? "default" : "secondary"}
-                className={`text-xs ${player.consecutiveCorrect >= 5 ? "bg-green-500" : ""}`}
-              >
-                {player.consecutiveCorrect}
-              </Badge>
-            </div>
-            
-            {/* Goals tiebreaker */}
-            <div className={`w-12 shrink-0 p-2 text-center text-xs sm:text-sm text-muted-foreground border-r ${index === 0 ? 'bg-yellow-500/10' : ''}`}>
-              {player.goalsInCorrectPicks}
-            </div>
-
-            {/* Pick cells */}
-            {Array.from({ length: maxPicks }, (_, i) => {
-              const pick = player.picks[i];
-              const { label, className } = getPickCellContent(pick);
-              
-              return (
-                <div 
-                  key={i} 
-                  className={`w-12 sm:w-14 shrink-0 p-1 sm:p-2 text-center text-xs sm:text-sm rounded-sm m-0.5 ${className} ${index === 0 && !pick?.result ? 'bg-yellow-500/10' : ''}`}
-                  title={pick?.fixtures ? `${pick.fixtures.home_team.short_name} vs ${pick.fixtures.away_team.short_name}` : undefined}
-                >
-                  {label}
-                </div>
-              );
-            })}
-          </div>
-        ))}
-
         {/* Legend */}
-        <div className="flex items-center gap-4 mt-4 pt-3 border-t text-xs text-muted-foreground">
+        <div className="flex items-center gap-3 px-2 py-2 border-t text-[10px] text-muted-foreground bg-muted/20">
           <div className="flex items-center gap-1">
-            <div className="w-4 h-4 rounded bg-green-500/80"></div>
-            <span>Correct</span>
+            <div className="w-3 h-3 rounded bg-green-600"></div>
+            <span>✓</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-4 h-4 rounded bg-red-500/80"></div>
-            <span>Wrong</span>
+            <div className="w-3 h-3 rounded bg-red-600"></div>
+            <span>✗</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-4 h-4 rounded bg-muted"></div>
+            <div className="w-3 h-3 rounded bg-muted"></div>
             <span>Pending</span>
           </div>
+          {!picksAreVisible && (
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 rounded bg-muted/50 text-center text-[8px]">?</div>
+              <span>Hidden</span>
+            </div>
+          )}
         </div>
       </div>
     </div>

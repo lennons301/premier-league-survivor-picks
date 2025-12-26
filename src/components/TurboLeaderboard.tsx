@@ -72,9 +72,12 @@ export default function TurboLeaderboard({
         if (pick.result === 'win') {
           consecutiveCorrect++;
           goalsInCorrectPicks += pick.goals_scored || 0;
-        } else if (pick.result === 'loss' || pick.result === 'draw') {
+        } else if (pick.result === 'loss') {
+          // In turbo mode, 'loss' means prediction != actual result
+          // Note: draw predictions that match get result='win', not 'draw'
           break;
         } else {
+          // No result yet (pending) - stop counting
           break;
         }
       }
@@ -162,7 +165,8 @@ export default function TurboLeaderboard({
     
     if (pick.result === 'win') {
       return { label: teamShort || '?', className: 'bg-green-600 text-white font-semibold' };
-    } else if (pick.result === 'loss' || pick.result === 'draw') {
+    } else if (pick.result === 'loss') {
+      // In turbo mode, 'loss' = prediction didn't match actual result
       return { label: teamShort || '?', className: 'bg-red-600 text-white font-semibold' };
     } else {
       // Pending - fixture not complete

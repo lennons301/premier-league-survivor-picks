@@ -274,6 +274,7 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
                   allPicks={allPicks}
                   gamePlayers={gamePlayers}
                   currentGameweek={currentGameweek}
+                  gameweekStatus={gameGameweek?.status as 'open' | 'active' | 'finished' | 'upcoming' | undefined}
                 />
               ) : gameMode === 'escalating' ? (
                 <EscalatingLeaderboard

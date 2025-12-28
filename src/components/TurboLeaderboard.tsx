@@ -115,7 +115,7 @@ export default function TurboLeaderboard({
       const targetElement = innerGrid || gridRef.current;
       
       const canvas = await html2canvas(targetElement, {
-        backgroundColor: '#1a1a2e',
+        backgroundColor: '#ffffff',
         scale: 2,
         logging: false,
         windowWidth: targetElement.scrollWidth,
@@ -160,11 +160,11 @@ export default function TurboLeaderboard({
   const getPickCellContent = (pick: Pick | null, isVisible: boolean) => {
     // If picks aren't visible yet (deadline not passed), show "?"
     if (!isVisible) {
-      return { label: '?', style: { backgroundColor: 'rgba(255,255,255,0.2)', color: '#9ca3af' } };
+      return { label: '?', style: { backgroundColor: '#e5e7eb', color: '#6b7280' } };
     }
     
     if (!pick) {
-      return { label: '-', style: { backgroundColor: 'rgba(255,255,255,0.1)', color: '#9ca3af' } };
+      return { label: '-', style: { backgroundColor: '#f3f4f6', color: '#6b7280' } };
     }
     
     // Get team short name based on pick type
@@ -185,7 +185,7 @@ export default function TurboLeaderboard({
       return { label: teamShort || '?', style: { backgroundColor: '#dc2626', color: '#ffffff', fontWeight: 600 } };
     } else {
       // Pending - fixture not complete
-      return { label: teamShort || '?', style: { backgroundColor: 'rgba(255,255,255,0.15)', color: '#ffffff' } };
+      return { label: teamShort || '?', style: { backgroundColor: '#e5e7eb', color: '#374151' } };
     }
   };
 
@@ -226,12 +226,12 @@ export default function TurboLeaderboard({
       <div 
         ref={gridRef} 
         className="rounded-lg border overflow-x-auto"
-        style={{ backgroundColor: '#1e1e2e' }}
+        style={{ backgroundColor: '#ffffff' }}
       >
         <div className="min-w-max">
           {/* Header row */}
-          <div className="flex border-b" style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}>
-            <div className="w-28 sm:w-36 shrink-0 px-2 py-1.5 font-medium text-xs border-r" style={{ color: '#ffffff' }}>
+          <div className="flex border-b" style={{ backgroundColor: '#f9fafb' }}>
+            <div className="w-28 sm:w-36 shrink-0 px-2 py-1.5 font-medium text-xs border-r" style={{ color: '#111827' }}>
               Player
             </div>
             <div className="w-8 sm:w-10 shrink-0 px-1 py-1.5 text-center font-medium text-xs border-r" title="Streak">
@@ -244,7 +244,7 @@ export default function TurboLeaderboard({
               <div 
                 key={i} 
                 className="w-14 sm:w-16 shrink-0 px-1 py-1.5 text-center font-medium text-xs"
-                style={{ color: '#ffffff' }}
+                style={{ color: '#111827' }}
               >
                 {i + 1}
               </div>
@@ -256,30 +256,30 @@ export default function TurboLeaderboard({
             <div 
               key={player.userId} 
               className="flex border-b last:border-b-0"
-              style={{ backgroundColor: index === 0 ? 'rgba(234, 179, 8, 0.1)' : index % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent' }}
+              style={{ backgroundColor: index === 0 ? '#fef9c3' : index % 2 === 0 ? '#f9fafb' : '#ffffff' }}
             >
               {/* Player name with rank */}
               <div className="w-28 sm:w-36 shrink-0 px-2 py-1 border-r flex items-center gap-1">
                 {index === 0 ? (
                   <Trophy className="h-3 w-3 text-yellow-500 shrink-0" />
                 ) : (
-                  <span className="w-3 text-center text-[10px] shrink-0" style={{ color: '#9ca3af' }}>{index + 1}</span>
+                  <span className="w-3 text-center text-[10px] shrink-0" style={{ color: '#6b7280' }}>{index + 1}</span>
                 )}
-                <span className="truncate text-xs font-medium" style={{ color: '#ffffff' }}>{player.displayName}</span>
+                <span className="truncate text-xs font-medium" style={{ color: '#111827' }}>{player.displayName}</span>
               </div>
               
               {/* Streak count */}
               <div className="w-8 sm:w-10 shrink-0 px-1 py-1 text-center border-r flex items-center justify-center">
                 <span 
                   className="text-xs font-bold"
-                  style={{ color: player.consecutiveCorrect >= 5 ? '#22c55e' : player.consecutiveCorrect > 0 ? '#ffffff' : '#9ca3af' }}
+                  style={{ color: player.consecutiveCorrect >= 5 ? '#16a34a' : player.consecutiveCorrect > 0 ? '#111827' : '#6b7280' }}
                 >
                   {player.consecutiveCorrect}
                 </span>
               </div>
               
               {/* Goals tiebreaker */}
-              <div className="w-8 sm:w-10 shrink-0 px-1 py-1 text-center text-xs border-r flex items-center justify-center" style={{ color: '#9ca3af' }}>
+              <div className="w-8 sm:w-10 shrink-0 px-1 py-1 text-center text-xs border-r flex items-center justify-center" style={{ color: '#6b7280' }}>
                 {player.goalsInCorrectPicks}
               </div>
 

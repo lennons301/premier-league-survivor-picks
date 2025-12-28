@@ -228,7 +228,7 @@ export default function TurboLeaderboard({
             {Array.from({ length: 10 }, (_, i) => (
               <div 
                 key={i} 
-                className="w-9 sm:w-11 shrink-0 px-1 py-1.5 text-center font-medium text-xs"
+                className="w-14 sm:w-16 shrink-0 px-1 py-1.5 text-center font-medium text-xs"
               >
                 {i + 1}
               </div>
@@ -270,10 +270,10 @@ export default function TurboLeaderboard({
                 return (
                   <div 
                     key={i} 
-                    className="w-9 sm:w-11 shrink-0 p-0.5 flex items-center justify-center"
+                    className="w-14 sm:w-16 shrink-0 p-0.5 flex items-center justify-center"
                   >
                     <div 
-                      className={`w-full h-6 sm:h-7 flex items-center justify-center text-[10px] sm:text-xs rounded ${className}`}
+                      className={`w-full h-7 sm:h-8 flex items-center justify-center text-[10px] sm:text-xs rounded text-center ${className}`}
                       title={pick?.fixtures ? `${pick.fixtures.home_team.short_name} vs ${pick.fixtures.away_team.short_name}` : undefined}
                     >
                       {label}

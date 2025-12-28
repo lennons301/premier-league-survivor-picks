@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Trophy, Zap, Download, Loader2 } from "lucide-react";
+import { Trophy, Zap, Copy, Loader2 } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import html2canvas from "html2canvas";
 import { toast } from "sonner";
@@ -105,31 +105,45 @@ export default function TurboLeaderboard({
     });
   }, [allPicks, gamePlayers, currentGameweek]);
 
-  const handleExportPng = async () => {
+  const handleCopyToClipboard = async () => {
     if (!gridRef.current) return;
     
     setIsExporting(true);
     try {
-      const canvas = await html2canvas(gridRef.current, {
+      // Get the inner scrollable content (min-w-max div) to capture full grid
+      const innerGrid = gridRef.current.querySelector('.min-w-max') as HTMLElement;
+      const targetElement = innerGrid || gridRef.current;
+      
+      const canvas = await html2canvas(targetElement, {
         backgroundColor: '#1a1a2e',
         scale: 2,
         logging: false,
+        windowWidth: targetElement.scrollWidth,
+        windowHeight: targetElement.scrollHeight,
       });
       
-      canvas.toBlob((blob) => {
+      canvas.toBlob(async (blob) => {
         if (blob) {
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.download = `turbo-leaderboard-gw${currentGameweek}.png`;
-          link.href = url;
-          link.click();
-          URL.revokeObjectURL(url);
-          toast.success("Leaderboard exported!");
+          try {
+            await navigator.clipboard.write([
+              new ClipboardItem({ 'image/png': blob })
+            ]);
+            toast.success("Leaderboard copied to clipboard!");
+          } catch (clipboardError) {
+            // Fallback: download if clipboard fails
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.download = `turbo-leaderboard-gw${currentGameweek}.png`;
+            link.href = url;
+            link.click();
+            URL.revokeObjectURL(url);
+            toast.success("Leaderboard downloaded (clipboard not supported)");
+          }
         }
-      });
+      }, 'image/png');
     } catch (error) {
       console.error("Export failed:", error);
-      toast.error("Failed to export leaderboard");
+      toast.error("Failed to copy leaderboard");
     } finally {
       setIsExporting(false);
     }
@@ -191,16 +205,16 @@ export default function TurboLeaderboard({
         <Button 
           variant="outline" 
           size="sm" 
-          onClick={handleExportPng}
+          onClick={handleCopyToClipboard}
           disabled={isExporting}
           className="gap-1.5 h-8 text-xs"
         >
           {isExporting ? (
             <Loader2 className="h-3 w-3 animate-spin" />
           ) : (
-            <Download className="h-3 w-3" />
+            <Copy className="h-3 w-3" />
           )}
-          PNG
+          Copy
         </Button>
       </div>
       
@@ -216,7 +230,7 @@ export default function TurboLeaderboard({
         <div className="min-w-max">
           {/* Header row */}
           <div className="flex border-b bg-muted/30">
-            <div className="w-20 sm:w-28 shrink-0 px-2 py-1.5 font-medium text-xs border-r">
+            <div className="w-28 sm:w-36 shrink-0 px-2 py-1.5 font-medium text-xs border-r">
               Player
             </div>
             <div className="w-8 sm:w-10 shrink-0 px-1 py-1.5 text-center font-medium text-xs border-r" title="Streak">
@@ -242,7 +256,7 @@ export default function TurboLeaderboard({
               className={`flex border-b last:border-b-0 ${index === 0 ? 'bg-yellow-500/10' : index % 2 === 0 ? 'bg-muted/5' : ''}`}
             >
               {/* Player name with rank */}
-              <div className="w-20 sm:w-28 shrink-0 px-2 py-1 border-r flex items-center gap-1">
+              <div className="w-28 sm:w-36 shrink-0 px-2 py-1 border-r flex items-center gap-1">
                 {index === 0 ? (
                   <Trophy className="h-3 w-3 text-yellow-500 shrink-0" />
                 ) : (

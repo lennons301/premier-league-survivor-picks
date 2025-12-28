@@ -1,14 +1,15 @@
+import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, Users, Calendar, Plus, Eye, UserPlus, Crown, Banknote } from "lucide-react";
+import { Trophy, Users, Calendar, Plus, Eye, UserPlus, Crown, Banknote, ChevronDown, ChevronUp } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/Navbar";
-
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 // Join Game Button Component
 const JoinGameButton = ({ gameId }: { gameId: string }) => {
   const { user } = useAuth();
@@ -60,6 +61,7 @@ const JoinGameButton = ({ gameId }: { gameId: string }) => {
 
 const Games = () => {
   const { user } = useAuth();
+  const [finishedGamesOpen, setFinishedGamesOpen] = useState(false);
 
   const { data: games, isLoading } = useQuery({
     queryKey: ["games"],
@@ -282,198 +284,254 @@ const Games = () => {
         </div>
 
         {/* My Games */}
-        {myGames && myGames.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-2xl font-semibold mb-4">My Games</h2>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {myGames.map((gamePlayer: any) => (
-                <Card key={gamePlayer.id} className="hover:shadow-lg transition-shadow">
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle className="text-lg">{gamePlayer.games.name}</CardTitle>
-                        <CardDescription>
-                          Gameweek {gamePlayer.games.current_gameweek}
-                        </CardDescription>
-                      </div>
-                      <Badge 
-                        variant="secondary" 
-                        className={`${getStatusColor(gamePlayer.games.status)} text-white`}
-                      >
-                        {gamePlayer.games.status}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2 text-sm text-muted-foreground mb-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1">
-                          <Banknote size={16} />
-                          <span>Prize Pot</span>
-                        </div>
-                        <span>£{gamePlayer.games.prize_pot ? Number(gamePlayer.games.prize_pot).toFixed(2) : '0.00'}</span>
-                      </div>
-                      {gamePlayer.games.status === 'finished' && (gamePlayer.games.winner || gamePlayer.games.winners) && (
-                        <div className="flex flex-col gap-1">
-                          <div className="flex items-center gap-1">
-                            <Crown size={16} />
-                            <span className="font-semibold">{gamePlayer.games.is_split ? 'Winners (Split)' : 'Winner'}</span>
+        {myGames && myGames.length > 0 && (() => {
+          const activeGames = myGames.filter((gp: any) => gp.games.status !== 'finished');
+          const finishedGames = myGames.filter((gp: any) => gp.games.status === 'finished');
+          
+          return (
+            <div className="mb-8">
+              <h2 className="text-2xl font-semibold mb-4">My Games</h2>
+              
+              {/* Active Games */}
+              {activeGames.length > 0 && (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-4">
+                  {activeGames.map((gamePlayer: any) => (
+                    <Card key={gamePlayer.id} className="hover:shadow-lg transition-shadow">
+                      <CardHeader>
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <CardTitle className="text-lg">{gamePlayer.games.name}</CardTitle>
+                            <CardDescription>
+                              Gameweek {gamePlayer.games.current_gameweek}
+                            </CardDescription>
                           </div>
-                          {gamePlayer.games.is_split && gamePlayer.games.winners ? (
-                            <div className="space-y-1 ml-5">
-                              {gamePlayer.games.winners.map((w: any) => (
-                                <div key={w.user_id} className="flex justify-between text-sm">
-                                  <span className="text-yellow-600">{w.profiles?.display_name}</span>
-                                  <span className="text-muted-foreground">£{Number(w.payout_amount).toFixed(2)}</span>
-                                </div>
-                              ))}
-                            </div>
-                          ) : gamePlayer.games.winner ? (
-                            <span className="ml-5 font-semibold text-yellow-600">{gamePlayer.games.winner.display_name}</span>
-                          ) : null}
+                          <Badge 
+                            variant="secondary" 
+                            className={`${getStatusColor(gamePlayer.games.status)} text-white`}
+                          >
+                            {gamePlayer.games.status}
+                          </Badge>
                         </div>
-                      )}
-                    </div>
-                    <div className="flex gap-2">
-                      <Link to={`/games/${gamePlayer.games.id}`} className="flex-1">
-                        <Button variant="outline" size="sm" className="w-full">
-                          <Eye size={16} className="mr-2" />
-                          View Game
-                        </Button>
-                      </Link>
-                      {gamePlayer.games.status === "active" && !gamePlayer.is_eliminated && (
-                        gamePlayer.games.current_deadline && new Date(gamePlayer.games.current_deadline) > new Date() ? (
-                          <Link to={`/games/${gamePlayer.games.id}/pick`} className="flex-1">
-                            <Button size="sm" className="w-full">
-                              {gamePlayer.games.current_pick ? `Edit Pick for GW ${gamePlayer.games.current_gameweek}` : `Make Pick for GW ${gamePlayer.games.current_gameweek}`}
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2 text-sm text-muted-foreground mb-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1">
+                              <Banknote size={16} />
+                              <span>Prize Pot</span>
+                            </div>
+                            <span>£{gamePlayer.games.prize_pot ? Number(gamePlayer.games.prize_pot).toFixed(2) : '0.00'}</span>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Link to={`/games/${gamePlayer.games.id}`} className="flex-1">
+                            <Button variant="outline" size="sm" className="w-full">
+                              <Eye size={16} className="mr-2" />
+                              View Game
                             </Button>
                           </Link>
-                        ) : (
-                          <Button size="sm" variant="outline" disabled className="w-full">
-                            {gamePlayer.games.current_pick ? `Pick Locked for GW ${gamePlayer.games.current_gameweek}` : `Deadline Passed for GW ${gamePlayer.games.current_gameweek}`}
-                          </Button>
-                        )
-                      )}
+                          {gamePlayer.games.status === "active" && !gamePlayer.is_eliminated && (
+                            gamePlayer.games.current_deadline && new Date(gamePlayer.games.current_deadline) > new Date() ? (
+                              <Link to={`/games/${gamePlayer.games.id}/pick`} className="flex-1">
+                                <Button size="sm" className="w-full">
+                                  {gamePlayer.games.current_pick ? `Edit Pick for GW ${gamePlayer.games.current_gameweek}` : `Make Pick for GW ${gamePlayer.games.current_gameweek}`}
+                                </Button>
+                              </Link>
+                            ) : (
+                              <Button size="sm" variant="outline" disabled className="w-full">
+                                {gamePlayer.games.current_pick ? `Pick Locked for GW ${gamePlayer.games.current_gameweek}` : `Deadline Passed for GW ${gamePlayer.games.current_gameweek}`}
+                              </Button>
+                            )
+                          )}
+                        </div>
+                        {gamePlayer.is_eliminated && (
+                          <Badge variant="destructive" className="mt-2">
+                            Eliminated in GW {gamePlayer.eliminated_gameweek}
+                          </Badge>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+              
+              {/* Finished Games (Collapsible) */}
+              {finishedGames.length > 0 && (
+                <Collapsible open={finishedGamesOpen} onOpenChange={setFinishedGamesOpen}>
+                  <CollapsibleTrigger asChild>
+                    <Button variant="ghost" className="flex items-center gap-2 mb-4 text-muted-foreground hover:text-foreground">
+                      {finishedGamesOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                      Finished Games ({finishedGames.length})
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {finishedGames.map((gamePlayer: any) => (
+                        <Card key={gamePlayer.id} className="hover:shadow-lg transition-shadow opacity-75">
+                          <CardHeader>
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <CardTitle className="text-lg">{gamePlayer.games.name}</CardTitle>
+                                <CardDescription>
+                                  Gameweek {gamePlayer.games.current_gameweek}
+                                </CardDescription>
+                              </div>
+                              <Badge 
+                                variant="secondary" 
+                                className={`${getStatusColor(gamePlayer.games.status)} text-white`}
+                              >
+                                {gamePlayer.games.status}
+                              </Badge>
+                            </div>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="space-y-2 text-sm text-muted-foreground mb-4">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-1">
+                                  <Banknote size={16} />
+                                  <span>Prize Pot</span>
+                                </div>
+                                <span>£{gamePlayer.games.prize_pot ? Number(gamePlayer.games.prize_pot).toFixed(2) : '0.00'}</span>
+                              </div>
+                              {(gamePlayer.games.winner || gamePlayer.games.winners) && (
+                                <div className="flex flex-col gap-1">
+                                  <div className="flex items-center gap-1">
+                                    <Crown size={16} />
+                                    <span className="font-semibold">{gamePlayer.games.is_split ? 'Winners (Split)' : 'Winner'}</span>
+                                  </div>
+                                  {gamePlayer.games.is_split && gamePlayer.games.winners ? (
+                                    <div className="space-y-1 ml-5">
+                                      {gamePlayer.games.winners.map((w: any) => (
+                                        <div key={w.user_id} className="flex justify-between text-sm">
+                                          <span className="text-yellow-600">{w.profiles?.display_name}</span>
+                                          <span className="text-muted-foreground">£{Number(w.payout_amount).toFixed(2)}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : gamePlayer.games.winner ? (
+                                    <span className="ml-5 font-semibold text-yellow-600">{gamePlayer.games.winner.display_name}</span>
+                                  ) : null}
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex gap-2">
+                              <Link to={`/games/${gamePlayer.games.id}`} className="flex-1">
+                                <Button variant="outline" size="sm" className="w-full">
+                                  <Eye size={16} className="mr-2" />
+                                  View Game
+                                </Button>
+                              </Link>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
                     </div>
-                    {gamePlayer.is_eliminated && (
-                      <Badge variant="destructive" className="mt-2">
-                        Eliminated in GW {gamePlayer.eliminated_gameweek}
-                      </Badge>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
+                  </CollapsibleContent>
+                </Collapsible>
+              )}
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Available Games */}
-        <div>
-          <h2 className="text-2xl font-semibold mb-4">Available Games</h2>
-          {games && games.length > 0 ? (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {games.map((game: any) => (
-                <Card key={game.id} className="hover:shadow-lg transition-shadow">
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle className="text-lg">{game.name}</CardTitle>
-                        <CardDescription>
-                          Created by {game.creator?.display_name || "Unknown"}
-                        </CardDescription>
-                      </div>
-                      <Badge 
-                        variant="secondary" 
-                        className={`${getStatusColor(game.status)} text-white`}
-                      >
-                        {game.status}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2 text-sm text-muted-foreground mb-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1">
-                          <Users size={16} />
-                          <span>Players</span>
-                        </div>
-                        <span>{game.game_players?.[0]?.count || 0}{game.max_players ? `/${game.max_players}` : ""}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1">
-                          <Trophy size={16} />
-                          <span>Gameweek</span>
-                        </div>
-                        <span>{game.current_gameweek}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1">
-                          <Banknote size={16} />
-                          <span>Prize Pot</span>
-                        </div>
-                        <span>£{game.prize_pot ? Number(game.prize_pot).toFixed(2) : '0.00'}</span>
-                      </div>
-                      {game.status === 'finished' && (game.winner || game.winners) && (
-                        <div className="flex flex-col gap-1">
-                          <div className="flex items-center gap-1">
-                            <Crown size={16} />
-                            <span className="font-semibold">{game.is_split ? 'Winners (Split)' : 'Winner'}</span>
+        {(() => {
+          // Filter to only show games that are joinable:
+          // 1. Status is "active" and still on starting gameweek (picks not locked)
+          // 2. User is not already in the game
+          const myGameIds = new Set(myGames?.map((gp: any) => gp.games.id) || []);
+          const availableGames = games?.filter((game: any) => 
+            game.status === "active" && 
+            game.current_gameweek === game.starting_gameweek &&
+            !myGameIds.has(game.id)
+          ) || [];
+          
+          return (
+            <div>
+              <h2 className="text-2xl font-semibold mb-4">Available Games</h2>
+              {availableGames.length > 0 ? (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {availableGames.map((game: any) => (
+                    <Card key={game.id} className="hover:shadow-lg transition-shadow">
+                      <CardHeader>
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <CardTitle className="text-lg">{game.name}</CardTitle>
+                            <CardDescription>
+                              Created by {game.creator?.display_name || "Unknown"}
+                            </CardDescription>
                           </div>
-                          {game.is_split && game.winners ? (
-                            <div className="space-y-1 ml-5">
-                              {game.winners.map((w: any) => (
-                                <div key={w.user_id} className="flex justify-between text-sm">
-                                  <span className="text-yellow-600">{w.profiles?.display_name}</span>
-                                  <span className="text-muted-foreground">£{Number(w.payout_amount).toFixed(2)}</span>
-                                </div>
-                              ))}
+                          <Badge 
+                            variant="secondary" 
+                            className={`${getStatusColor(game.status)} text-white`}
+                          >
+                            {game.status}
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2 text-sm text-muted-foreground mb-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1">
+                              <Users size={16} />
+                              <span>Players</span>
                             </div>
-                          ) : game.winner ? (
-                            <span className="ml-5 font-semibold text-yellow-600">{game.winner.display_name}</span>
-                          ) : null}
+                            <span>{game.game_players?.[0]?.count || 0}{game.max_players ? `/${game.max_players}` : ""}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1">
+                              <Trophy size={16} />
+                              <span>Gameweek</span>
+                            </div>
+                            <span>{game.current_gameweek}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1">
+                              <Banknote size={16} />
+                              <span>Prize Pot</span>
+                            </div>
+                            <span>£{game.prize_pot ? Number(game.prize_pot).toFixed(2) : '0.00'}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1">
+                              <Calendar size={16} />
+                              <span>Created</span>
+                            </div>
+                            <span>{new Date(game.created_at).toLocaleDateString()}</span>
+                          </div>
                         </div>
-                      )}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1">
-                          <Calendar size={16} />
-                          <span>Created</span>
+                        <div className="flex gap-2">
+                          <Link to={`/games/${game.id}`} className="flex-1">
+                            <Button variant="outline" size="sm" className="w-full">
+                              <Eye size={16} className="mr-2" />
+                              View Details
+                            </Button>
+                          </Link>
+                          <JoinGameButton gameId={game.id} />
                         </div>
-                        <span>{new Date(game.created_at).toLocaleDateString()}</span>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Link to={`/games/${game.id}`} className="flex-1">
-                        <Button variant="outline" size="sm" className="w-full">
-                          <Eye size={16} className="mr-2" />
-                          View Details
-                        </Button>
-                      </Link>
-                      {game.status === "active" && game.current_gameweek === game.starting_gameweek && (
-                        <JoinGameButton gameId={game.id} />
-                      )}
-                    </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <Card>
+                  <CardContent className="text-center py-8">
+                    <Trophy className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                    <CardTitle className="mb-2">No Games Available</CardTitle>
+                    <CardDescription className="mb-4">
+                      Be the first to create a Last Person Standing (LPS) game!
+                    </CardDescription>
+                    <Link to="/games/create">
+                      <Button>
+                        <Plus size={16} className="mr-2" />
+                        Create Game
+                      </Button>
+                    </Link>
                   </CardContent>
                 </Card>
-              ))}
+              )}
             </div>
-          ) : (
-            <Card>
-              <CardContent className="text-center py-8">
-                <Trophy className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                <CardTitle className="mb-2">No Games Available</CardTitle>
-                <CardDescription className="mb-4">
-                  Be the first to create a Last Person Standing (LPS) game!
-                </CardDescription>
-                <Link to="/games/create">
-                  <Button>
-                    <Plus size={16} className="mr-2" />
-                    Create Game
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+          );
+        })()}
       </div>
     </div>
   );

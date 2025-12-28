@@ -156,7 +156,8 @@ export default function TurboLeaderboard({
     // Get team short name based on pick type
     let teamShort: string | undefined;
     if (pick.predicted_result === 'draw') {
-      teamShort = 'D';
+      const homeShort = pick.fixtures?.home_team?.short_name || '?';
+      teamShort = `${homeShort} - D`;
     } else {
       teamShort = pick.picked_side === 'home' 
         ? pick.fixtures?.home_team?.short_name 

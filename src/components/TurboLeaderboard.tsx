@@ -160,11 +160,11 @@ export default function TurboLeaderboard({
   const getPickCellContent = (pick: Pick | null, isVisible: boolean) => {
     // If picks aren't visible yet (deadline not passed), show "?"
     if (!isVisible) {
-      return { label: '?', className: 'bg-muted/50 text-muted-foreground' };
+      return { label: '?', style: { backgroundColor: 'rgba(255,255,255,0.2)', color: '#9ca3af' } };
     }
     
     if (!pick) {
-      return { label: '-', className: 'bg-muted/30 text-muted-foreground' };
+      return { label: '-', style: { backgroundColor: 'rgba(255,255,255,0.1)', color: '#9ca3af' } };
     }
     
     // Get team short name based on pick type
@@ -179,13 +179,13 @@ export default function TurboLeaderboard({
     }
     
     if (pick.result === 'win') {
-      return { label: teamShort || '?', className: 'bg-green-600 text-white font-semibold' };
+      return { label: teamShort || '?', style: { backgroundColor: '#16a34a', color: '#ffffff', fontWeight: 600 } };
     } else if (pick.result === 'loss') {
       // In turbo mode, 'loss' = prediction didn't match actual result
-      return { label: teamShort || '?', className: 'bg-red-600 text-white font-semibold' };
+      return { label: teamShort || '?', style: { backgroundColor: '#dc2626', color: '#ffffff', fontWeight: 600 } };
     } else {
       // Pending - fixture not complete
-      return { label: teamShort || '?', className: 'bg-muted text-foreground' };
+      return { label: teamShort || '?', style: { backgroundColor: 'rgba(255,255,255,0.15)', color: '#ffffff' } };
     }
   };
 
@@ -225,12 +225,13 @@ export default function TurboLeaderboard({
       {/* Scrollable Grid - optimized for mobile */}
       <div 
         ref={gridRef} 
-        className="rounded-lg border bg-card overflow-x-auto"
+        className="rounded-lg border overflow-x-auto"
+        style={{ backgroundColor: '#1e1e2e' }}
       >
         <div className="min-w-max">
           {/* Header row */}
-          <div className="flex border-b bg-muted/30">
-            <div className="w-28 sm:w-36 shrink-0 px-2 py-1.5 font-medium text-xs border-r">
+          <div className="flex border-b" style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}>
+            <div className="w-28 sm:w-36 shrink-0 px-2 py-1.5 font-medium text-xs border-r" style={{ color: '#ffffff' }}>
               Player
             </div>
             <div className="w-8 sm:w-10 shrink-0 px-1 py-1.5 text-center font-medium text-xs border-r" title="Streak">
@@ -243,6 +244,7 @@ export default function TurboLeaderboard({
               <div 
                 key={i} 
                 className="w-14 sm:w-16 shrink-0 px-1 py-1.5 text-center font-medium text-xs"
+                style={{ color: '#ffffff' }}
               >
                 {i + 1}
               </div>
@@ -253,33 +255,37 @@ export default function TurboLeaderboard({
           {leaderboardData.map((player, index) => (
             <div 
               key={player.userId} 
-              className={`flex border-b last:border-b-0 ${index === 0 ? 'bg-yellow-500/10' : index % 2 === 0 ? 'bg-muted/5' : ''}`}
+              className="flex border-b last:border-b-0"
+              style={{ backgroundColor: index === 0 ? 'rgba(234, 179, 8, 0.1)' : index % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent' }}
             >
               {/* Player name with rank */}
               <div className="w-28 sm:w-36 shrink-0 px-2 py-1 border-r flex items-center gap-1">
                 {index === 0 ? (
                   <Trophy className="h-3 w-3 text-yellow-500 shrink-0" />
                 ) : (
-                  <span className="w-3 text-center text-[10px] text-muted-foreground shrink-0">{index + 1}</span>
+                  <span className="w-3 text-center text-[10px] shrink-0" style={{ color: '#9ca3af' }}>{index + 1}</span>
                 )}
-                <span className="truncate text-xs font-medium">{player.displayName}</span>
+                <span className="truncate text-xs font-medium" style={{ color: '#ffffff' }}>{player.displayName}</span>
               </div>
               
               {/* Streak count */}
               <div className="w-8 sm:w-10 shrink-0 px-1 py-1 text-center border-r flex items-center justify-center">
-                <span className={`text-xs font-bold ${player.consecutiveCorrect >= 5 ? "text-green-500" : player.consecutiveCorrect > 0 ? "text-foreground" : "text-muted-foreground"}`}>
+                <span 
+                  className="text-xs font-bold"
+                  style={{ color: player.consecutiveCorrect >= 5 ? '#22c55e' : player.consecutiveCorrect > 0 ? '#ffffff' : '#9ca3af' }}
+                >
                   {player.consecutiveCorrect}
                 </span>
               </div>
               
               {/* Goals tiebreaker */}
-              <div className="w-8 sm:w-10 shrink-0 px-1 py-1 text-center text-xs text-muted-foreground border-r flex items-center justify-center">
+              <div className="w-8 sm:w-10 shrink-0 px-1 py-1 text-center text-xs border-r flex items-center justify-center" style={{ color: '#9ca3af' }}>
                 {player.goalsInCorrectPicks}
               </div>
 
               {/* Pick cells 1-10 */}
               {player.picks.map((pick, i) => {
-                const { label, className } = getPickCellContent(pick, picksAreVisible);
+                const { label, style } = getPickCellContent(pick, picksAreVisible);
                 
                 return (
                   <div 
@@ -287,7 +293,8 @@ export default function TurboLeaderboard({
                     className="w-14 sm:w-16 shrink-0 p-0.5 flex items-center justify-center"
                   >
                     <div 
-                      className={`w-full h-7 sm:h-8 flex items-center justify-center text-[10px] sm:text-xs rounded text-center ${className}`}
+                      className="w-full h-7 sm:h-8 flex items-center justify-center text-[10px] sm:text-xs rounded text-center"
+                      style={style}
                       title={pick?.fixtures ? `${pick.fixtures.home_team.short_name} vs ${pick.fixtures.away_team.short_name}` : undefined}
                     >
                       {label}

@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, Users, Calendar, Plus, Eye, UserPlus, Crown, Banknote, ChevronDown, ChevronUp } from "lucide-react";
+import { Trophy, Users, Calendar, Plus, Eye, UserPlus, Crown, Banknote, ChevronDown, ChevronUp, BarChart3, Settings, Target } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -323,25 +323,37 @@ const Games = () => {
                             <span>£{gamePlayer.games.prize_pot ? Number(gamePlayer.games.prize_pot).toFixed(2) : '0.00'}</span>
                           </div>
                         </div>
-                        <div className="flex gap-2">
-                          <Link to={`/games/${gamePlayer.games.id}`} className="flex-1">
-                            <Button variant="outline" size="sm" className="w-full">
-                              <Eye size={16} className="mr-2" />
-                              View Game
-                            </Button>
-                          </Link>
-                          {gamePlayer.games.status === "active" && !gamePlayer.is_eliminated && (
-                            gamePlayer.games.current_deadline && new Date(gamePlayer.games.current_deadline) > new Date() ? (
-                              <Link to={`/games/${gamePlayer.games.id}/pick`} className="flex-1">
-                                <Button size="sm" className="w-full">
-                                  {gamePlayer.games.current_pick ? `Edit Pick for GW ${gamePlayer.games.current_gameweek}` : `Make Pick for GW ${gamePlayer.games.current_gameweek}`}
+                        <div className="flex flex-col gap-2">
+                          <div className="flex gap-2">
+                            {gamePlayer.games.status === "active" && !gamePlayer.is_eliminated && (
+                              gamePlayer.games.current_deadline && new Date(gamePlayer.games.current_deadline) > new Date() ? (
+                                <Link to={`/games/${gamePlayer.games.id}/pick`} className="flex-1">
+                                  <Button size="sm" className="w-full">
+                                    <Target size={16} className="mr-2" />
+                                    {gamePlayer.games.current_pick ? 'Edit Pick' : 'Make Pick'}
+                                  </Button>
+                                </Link>
+                              ) : (
+                                <Button size="sm" variant="outline" disabled className="flex-1">
+                                  <Target size={16} className="mr-2" />
+                                  Picks Locked
                                 </Button>
-                              </Link>
-                            ) : (
-                              <Button size="sm" variant="outline" disabled className="w-full">
-                                {gamePlayer.games.current_pick ? `Pick Locked for GW ${gamePlayer.games.current_gameweek}` : `Deadline Passed for GW ${gamePlayer.games.current_gameweek}`}
+                              )
+                            )}
+                            <Link to={`/games/${gamePlayer.games.id}/progress`} className="flex-1">
+                              <Button variant="outline" size="sm" className="w-full">
+                                <BarChart3 size={16} className="mr-2" />
+                                Progress
                               </Button>
-                            )
+                            </Link>
+                          </div>
+                          {user?.id === gamePlayer.games.created_by && (
+                            <Link to={`/games/${gamePlayer.games.id}/admin`} className="w-full">
+                              <Button variant="secondary" size="sm" className="w-full">
+                                <Settings size={16} className="mr-2" />
+                                Admin Panel
+                              </Button>
+                            </Link>
                           )}
                         </div>
                         {gamePlayer.is_eliminated && (
@@ -414,13 +426,21 @@ const Games = () => {
                                 </div>
                               )}
                             </div>
-                            <div className="flex gap-2">
-                              <Link to={`/games/${gamePlayer.games.id}`} className="flex-1">
+                            <div className="flex flex-col gap-2">
+                              <Link to={`/games/${gamePlayer.games.id}/progress`} className="w-full">
                                 <Button variant="outline" size="sm" className="w-full">
-                                  <Eye size={16} className="mr-2" />
-                                  View Game
+                                  <BarChart3 size={16} className="mr-2" />
+                                  View Progress
                                 </Button>
                               </Link>
+                              {user?.id === gamePlayer.games.created_by && (
+                                <Link to={`/games/${gamePlayer.games.id}/admin`} className="w-full">
+                                  <Button variant="secondary" size="sm" className="w-full">
+                                    <Settings size={16} className="mr-2" />
+                                    Admin Panel
+                                  </Button>
+                                </Link>
+                              )}
                             </div>
                           </CardContent>
                         </Card>

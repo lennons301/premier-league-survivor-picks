@@ -174,6 +174,46 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Check and finish Turbo games for any gameweeks that are complete
+    console.log('Checking Turbo games for completion...')
+    const completedGameweeks = new Set<number>()
+    
+    // Find gameweeks where all fixtures are complete
+    for (const event of bootstrapData.events) {
+      if (event.finished) {
+        completedGameweeks.add(event.id)
+      }
+    }
+    
+    // Also check for gameweeks where all fixtures in our synced data are finished
+    const fixturesByGameweek = new Map<number, FPLFixture[]>()
+    for (const fixture of fixturesData) {
+      if (fixture.event) {
+        const existing = fixturesByGameweek.get(fixture.event) || []
+        existing.push(fixture)
+        fixturesByGameweek.set(fixture.event, existing)
+      }
+    }
+    
+    for (const [gameweek, fixtures] of fixturesByGameweek) {
+      if (fixtures.every(f => f.finished)) {
+        completedGameweeks.add(gameweek)
+      }
+    }
+    
+    // Call check_and_finish_turbo_games for each completed gameweek
+    for (const gameweek of completedGameweeks) {
+      console.log(`Checking Turbo games for gameweek ${gameweek}...`)
+      const { error } = await supabase.rpc('check_and_finish_turbo_games', {
+        p_gameweek_number: gameweek
+      })
+      if (error) {
+        console.error(`Error checking Turbo games for gameweek ${gameweek}:`, error)
+      } else {
+        console.log(`Turbo game check complete for gameweek ${gameweek}`)
+      }
+    }
+
     console.log('FPL data sync completed successfully')
 
     return new Response(

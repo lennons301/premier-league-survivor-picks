@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/Navbar";
 import RemovePlayerDialog from "@/components/RemovePlayerDialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { 
   Settings, Target, Users, TrendingUp, UserPlus, Calendar, 
   Trophy, Clock, CheckCircle, XCircle, Plus, Edit, Lock, Unlock, Trash2 
@@ -35,6 +36,7 @@ const GameAdmin = () => {
   const [homeScore, setHomeScore] = useState("");
   const [awayScore, setAwayScore] = useState("");
   const [adminFee, setAdminFee] = useState("");
+  const [selectedSplitWinners, setSelectedSplitWinners] = useState<string[]>([]);
 
   // State for remove player dialog
   const [removePlayerDialog, setRemovePlayerDialog] = useState<{
@@ -65,7 +67,15 @@ const GameAdmin = () => {
 
   const { data: players } = useQuery({
     queryKey: ["game-players", gameId],
-    queryFn: async () => {
+    queryFn: async (): Promise<Array<{
+      id: string;
+      game_id: string;
+      user_id: string;
+      joined_at: string;
+      is_eliminated: boolean;
+      eliminated_gameweek: number | null;
+      profiles?: { user_id: string; display_name: string };
+    }>> => {
       const { data, error } = await supabase
         .from("game_players")
         .select(`
@@ -89,7 +99,7 @@ const GameAdmin = () => {
         }));
       }
       
-      return data;
+      return data || [];
     },
   });
 
@@ -654,23 +664,58 @@ const GameAdmin = () => {
     }
   };
 
-  // Mutation to end game as split
+  // Mutation to end game as split with selected winners
   const endGameAsSplitMutation = useMutation({
-    mutationFn: async (adminFeeAmount: number) => {
-      const { error } = await supabase.rpc('end_game_as_split', {
-        p_game_id: gameId,
-        p_admin_fee: adminFeeAmount
-      });
-      if (error) throw error;
+    mutationFn: async ({ adminFeeAmount, winnerUserIds }: { adminFeeAmount: number; winnerUserIds: string[] }) => {
+      if (winnerUserIds.length === 0) {
+        throw new Error("At least one winner must be selected");
+      }
+
+      // Calculate prize pot
+      const prizePot = await supabase.rpc('calculate_prize_pot', { p_game_id: gameId });
+      if (prizePot.error) throw prizePot.error;
+
+      const remainingAmount = (prizePot.data as number) - adminFeeAmount;
+      if (remainingAmount < 0) {
+        throw new Error("Admin fee cannot exceed prize pot");
+      }
+
+      const splitAmount = remainingAmount / winnerUserIds.length;
+
+      // Update game status
+      const { error: gameError } = await supabase
+        .from("games")
+        .update({ 
+          status: 'finished',
+          admin_fee: adminFeeAmount,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", gameId);
+      
+      if (gameError) throw gameError;
+
+      // Insert winners for each selected player
+      for (const winnerId of winnerUserIds) {
+        const { error: winnerError } = await supabase
+          .from("game_winners")
+          .insert({
+            game_id: gameId,
+            user_id: winnerId,
+            payout_amount: splitAmount,
+            is_split: true
+          });
+        if (winnerError) throw winnerError;
+      }
     },
     onSuccess: () => {
       toast({
         title: "Game ended as split",
-        description: "Prize pot has been split equally among remaining players",
+        description: `Prize pot has been split among ${selectedSplitWinners.length} selected winners`,
       });
       queryClient.invalidateQueries({ queryKey: ["game", gameId] });
       queryClient.invalidateQueries({ queryKey: ["game-players", gameId] });
       setAdminFee("");
+      setSelectedSplitWinners([]);
     },
     onError: (error) => {
       toast({
@@ -691,7 +736,23 @@ const GameAdmin = () => {
       });
       return;
     }
-    endGameAsSplitMutation.mutate(fee);
+    if (selectedSplitWinners.length === 0) {
+      toast({
+        title: "No winners selected",
+        description: "Please select at least one player to receive the split",
+        variant: "destructive",
+      });
+      return;
+    }
+    endGameAsSplitMutation.mutate({ adminFeeAmount: fee, winnerUserIds: selectedSplitWinners });
+  };
+
+  const toggleSplitWinner = (userId: string) => {
+    setSelectedSplitWinners(prev => 
+      prev.includes(userId) 
+        ? prev.filter(id => id !== userId)
+        : [...prev, userId]
+    );
   };
 
   // Check if user is admin
@@ -792,9 +853,35 @@ const GameAdmin = () => {
                   <div>
                     <Label>End Game as Split</Label>
                     <p className="text-sm text-muted-foreground mt-1 mb-3">
-                      Split the prize pot equally among {players?.filter(p => !p.is_eliminated).length || 0} remaining players
+                      Select winners to split the prize pot
                     </p>
                     <div className="space-y-3">
+                      {/* Player selection */}
+                      <div>
+                        <Label className="mb-2 block">Select Winners ({selectedSplitWinners.length} selected)</Label>
+                        <div className="max-h-40 overflow-y-auto border rounded-lg p-2 space-y-2">
+                          {players?.map(player => (
+                            <div 
+                              key={player.id} 
+                              className={`flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer ${
+                                player.is_eliminated ? 'opacity-50' : ''
+                              }`}
+                              onClick={() => toggleSplitWinner(player.user_id)}
+                            >
+                              <Checkbox 
+                                checked={selectedSplitWinners.includes(player.user_id)}
+                                onCheckedChange={() => toggleSplitWinner(player.user_id)}
+                              />
+                              <span className="flex-1">
+                                {player.profiles?.display_name || 'Unknown'}
+                              </span>
+                              {player.is_eliminated && (
+                                <Badge variant="destructive" className="text-xs">Eliminated</Badge>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                       <div>
                         <Label htmlFor="adminFee">Admin Fee (£)</Label>
                         <Input
@@ -816,13 +903,17 @@ const GameAdmin = () => {
                           <span className="text-muted-foreground">Admin Fee:</span>
                           <span className="font-semibold">-£{adminFee || "0.00"}</span>
                         </div>
+                        <div className="flex justify-between mb-1">
+                          <span className="text-muted-foreground">Winners:</span>
+                          <span className="font-semibold">{selectedSplitWinners.length}</span>
+                        </div>
                         <Separator className="my-2" />
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Split per player:</span>
+                          <span className="text-muted-foreground">Split per winner:</span>
                           <span className="font-bold text-green-600">
                             £{
-                              players?.filter(p => !p.is_eliminated).length && prizePot
-                                ? ((prizePot - (parseFloat(adminFee) || 0)) / players.filter(p => !p.is_eliminated).length).toFixed(2)
+                              selectedSplitWinners.length > 0 && prizePot
+                                ? ((prizePot - (parseFloat(adminFee) || 0)) / selectedSplitWinners.length).toFixed(2)
                                 : "0.00"
                             }
                           </span>
@@ -830,12 +921,12 @@ const GameAdmin = () => {
                       </div>
                       <Button
                         onClick={handleEndGameAsSplit}
-                        disabled={endGameAsSplitMutation.isPending || game.status === "finished" || !players?.some(p => !p.is_eliminated)}
+                        disabled={endGameAsSplitMutation.isPending || game.status === "finished" || selectedSplitWinners.length === 0}
                         className="w-full"
                         variant="destructive"
                       >
                         <Trophy className="h-4 w-4 mr-2" />
-                        {endGameAsSplitMutation.isPending ? "Ending Game..." : "End Game as Split"}
+                        {endGameAsSplitMutation.isPending ? "Ending Game..." : `End Game - Split to ${selectedSplitWinners.length} Winner${selectedSplitWinners.length !== 1 ? 's' : ''}`}
                       </Button>
                     </div>
                   </div>

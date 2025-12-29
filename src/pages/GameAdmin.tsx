@@ -16,7 +16,7 @@ import Navbar from "@/components/Navbar";
 import RemovePlayerDialog from "@/components/RemovePlayerDialog";
 import { 
   Settings, Target, Users, TrendingUp, UserPlus, Calendar, 
-  Trophy, Clock, CheckCircle, XCircle, Plus, Edit, Lock, Trash2 
+  Trophy, Clock, CheckCircle, XCircle, Plus, Edit, Lock, Unlock, Trash2 
 } from "lucide-react";
 
 const GameAdmin = () => {
@@ -485,9 +485,37 @@ const GameAdmin = () => {
 
   const progressGameweekMutation = useMutation({
     mutationFn: async () => {
+      const currentGw = game?.current_gameweek || 1;
+      const nextGw = currentGw + 1;
+
+      // Mark current gameweek as finished
+      const { error: finishError } = await supabase
+        .from("game_gameweeks")
+        .update({ 
+          status: 'finished',
+          picks_visible: true
+        })
+        .eq("game_id", gameId)
+        .eq("gameweek_number", currentGw);
+
+      if (finishError) throw finishError;
+
+      // Set next gameweek to open (so users can make picks)
+      const { error: openError } = await supabase
+        .from("game_gameweeks")
+        .update({ 
+          status: 'open',
+          picks_visible: false
+        })
+        .eq("game_id", gameId)
+        .eq("gameweek_number", nextGw);
+
+      if (openError) throw openError;
+
+      // Update game's current gameweek
       const { error } = await supabase
         .from("games")
-        .update({ current_gameweek: (game?.current_gameweek || 1) + 1 })
+        .update({ current_gameweek: nextGw })
         .eq("id", gameId);
 
       if (error) throw error;
@@ -498,6 +526,7 @@ const GameAdmin = () => {
         description: `Advanced to gameweek ${(game?.current_gameweek || 1) + 1}`,
       });
       queryClient.invalidateQueries({ queryKey: ["game", gameId] });
+      queryClient.invalidateQueries({ queryKey: ["game-gameweek", gameId] });
     },
     onError: (error) => {
       toast({
@@ -508,7 +537,38 @@ const GameAdmin = () => {
     },
   });
 
-  // Mutation to activate gameweek manually
+  // Mutation to open gameweek (from upcoming to open - allows picks)
+  const openGameweekMutation = useMutation({
+    mutationFn: async () => {
+      if (!gameGameweek) throw new Error("Game gameweek not found");
+      
+      const { error } = await supabase
+        .from("game_gameweeks")
+        .update({ 
+          status: 'open',
+          picks_visible: false
+        })
+        .eq("id", gameGameweek.id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Gameweek opened",
+        description: "Users can now make picks for this gameweek",
+      });
+      queryClient.invalidateQueries({ queryKey: ["game-gameweek", gameId, game?.current_gameweek] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error opening gameweek",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mutation to activate gameweek manually (from open to active - locks picks and makes visible)
   const activateGameweekMutation = useMutation({
     mutationFn: async () => {
       if (!gameGameweek) throw new Error("Game gameweek not found");
@@ -852,7 +912,19 @@ const GameAdmin = () => {
                         <CheckCircle className="h-4 w-4" />
                         Process Results
                       </Button>
-                      {(gameGameweek?.status === 'open' || gameGameweek?.status === 'upcoming') && (
+                      {gameGameweek?.status === 'upcoming' && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => openGameweekMutation.mutate()}
+                          disabled={openGameweekMutation.isPending}
+                          className="flex items-center gap-2"
+                        >
+                          <Unlock className="h-4 w-4" />
+                          {openGameweekMutation.isPending ? "Opening..." : "Open for Picks"}
+                        </Button>
+                      )}
+                      {gameGameweek?.status === 'open' && (
                         <Button
                           variant="default"
                           size="sm"

@@ -327,7 +327,13 @@ const Games = () => {
                           <div className="flex gap-2">
                             {gamePlayer.games.status === "active" && !gamePlayer.is_eliminated && (
                               gamePlayer.games.current_deadline && new Date(gamePlayer.games.current_deadline) > new Date() ? (
-                                <Link to={`/games/${gamePlayer.games.id}/pick`} className="flex-1">
+                                <Link to={
+                                  gamePlayer.games.game_mode === "turbo" 
+                                    ? `/games/${gamePlayer.games.id}/turbo-pick` 
+                                    : gamePlayer.games.game_mode === "escalating"
+                                    ? `/games/${gamePlayer.games.id}/escalating-pick`
+                                    : `/games/${gamePlayer.games.id}/pick`
+                                } className="flex-1">
                                   <Button size="sm" className="w-full">
                                     <Target size={16} className="mr-2" />
                                     {gamePlayer.games.current_pick ? 'Edit Pick' : 'Make Pick'}

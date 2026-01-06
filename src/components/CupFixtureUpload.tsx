@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Upload, Trash2, Save, Download, FileText } from "lucide-react";
+import { Upload, Trash2, Save, Download, FileText, Check } from "lucide-react";
 
 interface CupFixture {
   id?: string;
@@ -28,7 +28,7 @@ export default function CupFixtureUpload({ gameId }: CupFixtureUploadProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [parsedFixtures, setParsedFixtures] = useState<CupFixture[]>([]);
-  const [isResultsMode, setIsResultsMode] = useState(false);
+  const [editingResults, setEditingResults] = useState<Record<string, { home: string; away: string }>>({});
 
   // Fetch existing fixtures
   const { data: existingFixtures } = useQuery({
@@ -44,7 +44,7 @@ export default function CupFixtureUpload({ gameId }: CupFixtureUploadProps) {
     },
   });
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, mode: 'fixtures' | 'results') => {
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -56,51 +56,19 @@ export default function CupFixtureUpload({ gameId }: CupFixtureUploadProps) {
       // Skip header row
       const dataLines = lines.slice(1);
       
-      if (mode === 'fixtures') {
-        const fixtures: CupFixture[] = dataLines.map((line, index) => {
-          const [home_team, away_team, tier_diff] = line.split(',').map(s => s.trim());
-          return {
-            home_team: home_team || '',
-            away_team: away_team || '',
-            tier_difference: parseInt(tier_diff) || 0,
-            home_goals: null,
-            away_goals: null,
-            fixture_order: index + 1,
-          };
-        }).filter(f => f.home_team && f.away_team);
-        
-        setParsedFixtures(fixtures);
-        setIsResultsMode(false);
-      } else {
-        // Results mode - update existing fixtures
-        if (!existingFixtures?.length) {
-          toast({
-            title: "No fixtures to update",
-            description: "Upload fixtures first before adding results",
-            variant: "destructive",
-          });
-          return;
-        }
-        
-        const updatedFixtures = existingFixtures.map(fixture => {
-          const resultLine = dataLines.find(line => {
-            const [home, away] = line.split(',').map(s => s.trim().toLowerCase());
-            return home === fixture.home_team.toLowerCase() || 
-                   away === fixture.away_team.toLowerCase();
-          });
-          
-          if (resultLine) {
-            const parts = resultLine.split(',').map(s => s.trim());
-            const homeGoals = parts[3] !== '' ? parseInt(parts[3]) : null;
-            const awayGoals = parts[4] !== '' ? parseInt(parts[4]) : null;
-            return { ...fixture, home_goals: homeGoals, away_goals: awayGoals };
-          }
-          return fixture;
-        });
-        
-        setParsedFixtures(updatedFixtures);
-        setIsResultsMode(true);
-      }
+      const fixtures: CupFixture[] = dataLines.map((line, index) => {
+        const [home_team, away_team, tier_diff] = line.split(',').map(s => s.trim());
+        return {
+          home_team: home_team || '',
+          away_team: away_team || '',
+          tier_difference: parseInt(tier_diff) || 0,
+          home_goals: null,
+          away_goals: null,
+          fixture_order: index + 1,
+        };
+      }).filter(f => f.home_team && f.away_team);
+      
+      setParsedFixtures(fixtures);
     };
     reader.readAsText(file);
     
@@ -110,45 +78,29 @@ export default function CupFixtureUpload({ gameId }: CupFixtureUploadProps) {
 
   const saveFixturesMutation = useMutation({
     mutationFn: async () => {
-      if (isResultsMode) {
-        // Update existing fixtures with results
-        for (const fixture of parsedFixtures) {
-          if (fixture.id) {
-            const { error } = await supabase
-              .from("cup_fixtures")
-              .update({
-                home_goals: fixture.home_goals,
-                away_goals: fixture.away_goals,
-              })
-              .eq("id", fixture.id);
-            if (error) throw error;
-          }
-        }
-      } else {
-        // Delete existing and insert new
-        await supabase
-          .from("cup_fixtures")
-          .delete()
-          .eq("game_id", gameId);
-        
-        const { error } = await supabase
-          .from("cup_fixtures")
-          .insert(parsedFixtures.map(f => ({
-            game_id: gameId,
-            home_team: f.home_team,
-            away_team: f.away_team,
-            tier_difference: f.tier_difference,
-            home_goals: f.home_goals,
-            away_goals: f.away_goals,
-            fixture_order: f.fixture_order,
-          })));
-        if (error) throw error;
-      }
+      // Delete existing and insert new
+      await supabase
+        .from("cup_fixtures")
+        .delete()
+        .eq("game_id", gameId);
+      
+      const { error } = await supabase
+        .from("cup_fixtures")
+        .insert(parsedFixtures.map(f => ({
+          game_id: gameId,
+          home_team: f.home_team,
+          away_team: f.away_team,
+          tier_difference: f.tier_difference,
+          home_goals: f.home_goals,
+          away_goals: f.away_goals,
+          fixture_order: f.fixture_order,
+        })));
+      if (error) throw error;
     },
     onSuccess: () => {
       toast({
-        title: isResultsMode ? "Results updated!" : "Fixtures uploaded!",
-        description: `${parsedFixtures.length} fixtures ${isResultsMode ? 'updated' : 'saved'} successfully.`,
+        title: "Fixtures uploaded!",
+        description: `${parsedFixtures.length} fixtures saved successfully.`,
       });
       queryClient.invalidateQueries({ queryKey: ["cup-fixtures", gameId] });
       setParsedFixtures([]);
@@ -156,6 +108,37 @@ export default function CupFixtureUpload({ gameId }: CupFixtureUploadProps) {
     onError: (error) => {
       toast({
         title: "Error saving fixtures",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateResultMutation = useMutation({
+    mutationFn: async ({ fixtureId, homeGoals, awayGoals }: { fixtureId: string; homeGoals: number; awayGoals: number }) => {
+      const { error } = await supabase
+        .from("cup_fixtures")
+        .update({
+          home_goals: homeGoals,
+          away_goals: awayGoals,
+        })
+        .eq("id", fixtureId);
+      if (error) throw error;
+    },
+    onSuccess: (_, variables) => {
+      toast({
+        title: "Result saved!",
+        description: "Fixture result updated successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["cup-fixtures", gameId] });
+      setEditingResults(prev => {
+        const { [variables.fixtureId]: _, ...rest } = prev;
+        return rest;
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error saving result",
         description: error.message,
         variant: "destructive",
       });
@@ -184,26 +167,16 @@ export default function CupFixtureUpload({ gameId }: CupFixtureUploadProps) {
     },
   });
 
-  const downloadTemplate = (type: 'fixtures' | 'results') => {
-    let content: string;
-    if (type === 'fixtures') {
-      content = 'home_team,away_team,tier_difference\n';
-      content += 'Manchester United,Liverpool,0\n';
-      content += 'Arsenal,Bristol City,2\n';
-      content += 'Plymouth,Chelsea,-2\n';
-    } else {
-      content = 'home_team,away_team,tier_difference,home_goals,away_goals\n';
-      if (existingFixtures?.length) {
-        existingFixtures.forEach(f => {
-          content += `${f.home_team},${f.away_team},${f.tier_difference},${f.home_goals ?? ''},${f.away_goals ?? ''}\n`;
-        });
-      }
-    }
+  const downloadTemplate = () => {
+    let content = 'home_team,away_team,tier_difference\n';
+    content += 'Manchester United,Liverpool,0\n';
+    content += 'Arsenal,Bristol City,2\n';
+    content += 'Plymouth,Chelsea,-2\n';
     
     const blob = new Blob([content], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.download = type === 'fixtures' ? 'cup-fixtures-template.csv' : 'cup-results.csv';
+    link.download = 'cup-fixtures-template.csv';
     link.href = url;
     link.click();
     URL.revokeObjectURL(url);
@@ -211,6 +184,46 @@ export default function CupFixtureUpload({ gameId }: CupFixtureUploadProps) {
 
   const clearParsed = () => {
     setParsedFixtures([]);
+  };
+
+  const handleResultChange = (fixtureId: string, field: 'home' | 'away', value: string) => {
+    setEditingResults(prev => ({
+      ...prev,
+      [fixtureId]: {
+        ...prev[fixtureId],
+        [field]: value,
+      }
+    }));
+  };
+
+  const saveResult = (fixtureId: string) => {
+    const result = editingResults[fixtureId];
+    if (!result || result.home === '' || result.away === '') {
+      toast({
+        title: "Invalid result",
+        description: "Both home and away scores are required",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    updateResultMutation.mutate({
+      fixtureId,
+      homeGoals: parseInt(result.home),
+      awayGoals: parseInt(result.away),
+    });
+  };
+
+  const startEditing = (fixture: CupFixture) => {
+    if (fixture.id) {
+      setEditingResults(prev => ({
+        ...prev,
+        [fixture.id!]: {
+          home: fixture.home_goals?.toString() ?? '',
+          away: fixture.away_goals?.toString() ?? '',
+        }
+      }));
+    }
   };
 
   return (
@@ -221,26 +234,16 @@ export default function CupFixtureUpload({ gameId }: CupFixtureUploadProps) {
           Cup Fixtures & Results
         </CardTitle>
         <CardDescription>
-          Upload fixtures via CSV. Format: home_team, away_team, tier_difference
+          Upload fixtures via CSV. Enter results directly in the table below.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Template downloads */}
+        {/* Template download and upload */}
         <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" size="sm" onClick={() => downloadTemplate('fixtures')}>
+          <Button variant="outline" size="sm" onClick={downloadTemplate}>
             <Download className="h-4 w-4 mr-2" />
             Fixtures Template
           </Button>
-          {existingFixtures && existingFixtures.length > 0 && (
-            <Button variant="outline" size="sm" onClick={() => downloadTemplate('results')}>
-              <Download className="h-4 w-4 mr-2" />
-              Results Template
-            </Button>
-          )}
-        </div>
-
-        {/* Upload buttons */}
-        <div className="flex gap-2 flex-wrap">
           <div>
             <Label htmlFor="fixture-upload" className="cursor-pointer">
               <div className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 text-sm">
@@ -253,30 +256,12 @@ export default function CupFixtureUpload({ gameId }: CupFixtureUploadProps) {
               type="file"
               accept=".csv"
               className="hidden"
-              onChange={(e) => handleFileUpload(e, 'fixtures')}
+              onChange={handleFileUpload}
             />
           </div>
-          
-          {existingFixtures && existingFixtures.length > 0 && (
-            <div>
-              <Label htmlFor="results-upload" className="cursor-pointer">
-                <div className="flex items-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/90 text-sm">
-                  <Upload className="h-4 w-4" />
-                  Upload Results
-                </div>
-              </Label>
-              <Input
-                id="results-upload"
-                type="file"
-                accept=".csv"
-                className="hidden"
-                onChange={(e) => handleFileUpload(e, 'results')}
-              />
-            </div>
-          )}
         </div>
 
-        {/* Existing fixtures display */}
+        {/* Existing fixtures with inline result editing */}
         {existingFixtures && existingFixtures.length > 0 && parsedFixtures.length === 0 && (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -290,7 +275,7 @@ export default function CupFixtureUpload({ gameId }: CupFixtureUploadProps) {
                 Process Results
               </Button>
             </div>
-            <div className="max-h-64 overflow-y-auto border rounded">
+            <div className="max-h-96 overflow-y-auto border rounded">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -298,28 +283,75 @@ export default function CupFixtureUpload({ gameId }: CupFixtureUploadProps) {
                     <TableHead>Home</TableHead>
                     <TableHead>Away</TableHead>
                     <TableHead className="w-16">Tier</TableHead>
-                    <TableHead className="w-20">Result</TableHead>
+                    <TableHead className="w-40">Result</TableHead>
+                    <TableHead className="w-16"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {existingFixtures.map((fixture) => (
-                    <TableRow key={fixture.id}>
-                      <TableCell className="text-xs">{fixture.fixture_order}</TableCell>
-                      <TableCell className="text-xs">{fixture.home_team}</TableCell>
-                      <TableCell className="text-xs">{fixture.away_team}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="text-xs">
-                          {fixture.tier_difference > 0 ? `+${fixture.tier_difference}` : fixture.tier_difference}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-xs">
-                        {fixture.home_goals !== null && fixture.away_goals !== null 
-                          ? `${fixture.home_goals} - ${fixture.away_goals}`
-                          : '-'
-                        }
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {existingFixtures.map((fixture) => {
+                    const isEditing = fixture.id && editingResults[fixture.id] !== undefined;
+                    const hasResult = fixture.home_goals !== null && fixture.away_goals !== null;
+                    
+                    return (
+                      <TableRow key={fixture.id}>
+                        <TableCell className="text-xs">{fixture.fixture_order}</TableCell>
+                        <TableCell className="text-xs">{fixture.home_team}</TableCell>
+                        <TableCell className="text-xs">{fixture.away_team}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-xs">
+                            {fixture.tier_difference > 0 ? `+${fixture.tier_difference}` : fixture.tier_difference}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {isEditing ? (
+                            <div className="flex items-center gap-1">
+                              <Input
+                                type="number"
+                                min="0"
+                                className="w-12 h-7 text-xs text-center"
+                                value={editingResults[fixture.id!]?.home ?? ''}
+                                onChange={(e) => handleResultChange(fixture.id!, 'home', e.target.value)}
+                              />
+                              <span className="text-xs">-</span>
+                              <Input
+                                type="number"
+                                min="0"
+                                className="w-12 h-7 text-xs text-center"
+                                value={editingResults[fixture.id!]?.away ?? ''}
+                                onChange={(e) => handleResultChange(fixture.id!, 'away', e.target.value)}
+                              />
+                            </div>
+                          ) : (
+                            <span className="text-xs">
+                              {hasResult ? `${fixture.home_goals} - ${fixture.away_goals}` : '-'}
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {isEditing ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0"
+                              onClick={() => saveResult(fixture.id!)}
+                              disabled={updateResultMutation.isPending}
+                            >
+                              <Check className="h-4 w-4 text-green-600" />
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-xs"
+                              onClick={() => startEditing(fixture)}
+                            >
+                              {hasResult ? 'Edit' : 'Add'}
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
@@ -331,7 +363,7 @@ export default function CupFixtureUpload({ gameId }: CupFixtureUploadProps) {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <h4 className="font-medium text-sm">
-                {isResultsMode ? 'Results Preview' : 'Fixtures Preview'} ({parsedFixtures.length})
+                Fixtures Preview ({parsedFixtures.length})
               </h4>
               <div className="flex gap-2">
                 <Button variant="ghost" size="sm" onClick={clearParsed}>
@@ -356,7 +388,6 @@ export default function CupFixtureUpload({ gameId }: CupFixtureUploadProps) {
                     <TableHead>Home</TableHead>
                     <TableHead>Away</TableHead>
                     <TableHead className="w-16">Tier</TableHead>
-                    {isResultsMode && <TableHead className="w-20">Result</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -370,14 +401,6 @@ export default function CupFixtureUpload({ gameId }: CupFixtureUploadProps) {
                           {fixture.tier_difference > 0 ? `+${fixture.tier_difference}` : fixture.tier_difference}
                         </Badge>
                       </TableCell>
-                      {isResultsMode && (
-                        <TableCell className="text-xs">
-                          {fixture.home_goals !== null && fixture.away_goals !== null 
-                            ? `${fixture.home_goals} - ${fixture.away_goals}`
-                            : '-'
-                          }
-                        </TableCell>
-                      )}
                     </TableRow>
                   ))}
                 </TableBody>

@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PlayerProgressTable from "@/components/PlayerProgressTable";
 import TurboLeaderboard from "@/components/TurboLeaderboard";
 import EscalatingLeaderboard from "@/components/EscalatingLeaderboard";
+import CupLeaderboard from "@/components/CupLeaderboard";
 
 interface Pick {
   id: string;
@@ -40,6 +41,7 @@ interface GamePlayer {
   user_id: string;
   is_eliminated: boolean;
   eliminated_gameweek?: number;
+  lives?: number;
   profiles: { display_name: string } | null;
 }
 
@@ -54,6 +56,25 @@ interface Game {
   game_mode?: string;
 }
 
+interface CupPick {
+  id: string;
+  user_id: string;
+  fixture_id: string;
+  picked_team: string;
+  preference_order: number;
+  result: string | null;
+  goals_counted: number;
+  life_gained: number;
+  life_spent: boolean;
+  cup_fixtures: {
+    home_team: string;
+    away_team: string;
+    tier_difference: number;
+    home_goals: number | null;
+    away_goals: number | null;
+  } | null;
+}
+
 interface PickHistoryProps {
   allPicks: Pick[];
   players: Player[];
@@ -62,9 +83,10 @@ interface PickHistoryProps {
   gamePlayers: GamePlayer[];
   game: Game;
   gameGameweek?: GameGameweek;
+  cupPicks?: CupPick[];
 }
 
-export default function PickHistory({ allPicks, players, currentGameweek, gameGameweeks, gamePlayers, game, gameGameweek }: PickHistoryProps) {
+export default function PickHistory({ allPicks, players, currentGameweek, gameGameweeks, gamePlayers, game, gameGameweek, cupPicks = [] }: PickHistoryProps) {
   const [sortBy, setSortBy] = useState<'player' | 'fixture' | 'pick' | 'result' | 'goals' | 'gameweek'>('gameweek');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [expandedGameweeks, setExpandedGameweeks] = useState<Set<number>>(new Set());
@@ -262,7 +284,8 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="pivot">
                 {gameMode === 'turbo' ? 'Turbo Leaderboard' : 
-                 gameMode === 'escalating' ? 'Escalating Leaderboard' : 
+                 gameMode === 'escalating' ? 'Escalating Leaderboard' :
+                 gameMode === 'cup' ? 'Cup Leaderboard' : 
                  'Player Progress'}
               </TabsTrigger>
               <TabsTrigger value="overview">GW History</TabsTrigger>
@@ -283,6 +306,12 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
                   gameGameweeks={gameGameweeks || []}
                   startingGameweek={game?.starting_gameweek || 1}
                   currentGameweek={currentGameweek}
+                />
+              ) : gameMode === 'cup' ? (
+                <CupLeaderboard
+                  allPicks={cupPicks as any}
+                  gamePlayers={gamePlayers.map(p => ({ ...p, lives: p.lives || 0 }))}
+                  gameStatus={gameGameweek?.status as 'active' | 'finished' | 'pending' | undefined}
                 />
               ) : (
                 <PlayerProgressTable 

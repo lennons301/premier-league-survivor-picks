@@ -332,6 +332,8 @@ const Games = () => {
                                     ? `/games/${gamePlayer.games.id}/turbo-pick` 
                                     : gamePlayer.games.game_mode === "escalating"
                                     ? `/games/${gamePlayer.games.id}/escalating-pick`
+                                    : gamePlayer.games.game_mode === "cup"
+                                    ? `/games/${gamePlayer.games.id}/cup-pick`
                                     : `/games/${gamePlayer.games.id}/pick`
                                 } className="flex-1">
                                   <Button size="sm" className="w-full">

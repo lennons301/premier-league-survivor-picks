@@ -9,7 +9,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/Navbar";
-import { Trophy, Users, Calendar, Target, UserPlus, Settings, Play, Clock, Zap, TrendingUp, Shield } from "lucide-react";
+import { Trophy, Users, Calendar, Target, UserPlus, Settings, Play, Clock, Zap, TrendingUp, Shield, Award } from "lucide-react";
 import { useState, useEffect } from "react";
 
 const GameDetail = () => {
@@ -328,6 +328,7 @@ const GameDetail = () => {
                     {game.game_mode === "turbo" && <Zap className="h-3 w-3 text-yellow-500" />}
                     {game.game_mode === "escalating" && <TrendingUp className="h-3 w-3 text-amber-500" />}
                     {game.game_mode === "classic" && <Shield className="h-3 w-3 text-blue-500" />}
+                    {game.game_mode === "cup" && <Award className="h-3 w-3 text-purple-500" />}
                     {game.game_mode || "classic"}
                   </Badge>
                 </div>
@@ -384,11 +385,14 @@ const GameDetail = () => {
                         ? `/games/${gameId}/turbo-pick` 
                         : game.game_mode === "escalating"
                         ? `/games/${gameId}/escalating-pick`
+                        : game.game_mode === "cup"
+                        ? `/games/${gameId}/cup-pick`
                         : `/games/${gameId}/pick`
                     }>
                       <Button className="w-full">
                         {game.game_mode === "turbo" && <Zap size={16} className="mr-2" />}
                         {game.game_mode === "escalating" && <TrendingUp size={16} className="mr-2" />}
+                        {game.game_mode === "cup" && <Award size={16} className="mr-2" />}
                         {game.game_mode === "classic" && <Play size={16} className="mr-2" />}
                         {!game.game_mode && <Play size={16} className="mr-2" />}
                         {currentPick ? `Edit Pick for GW ${game.current_gameweek}` : `Make Pick for GW ${game.current_gameweek}`}

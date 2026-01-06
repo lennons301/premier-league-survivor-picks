@@ -14,6 +14,113 @@ export type Database = {
   }
   public: {
     Tables: {
+      cup_fixtures: {
+        Row: {
+          away_goals: number | null
+          away_team: string
+          created_at: string
+          fixture_order: number
+          game_id: string
+          home_goals: number | null
+          home_team: string
+          id: string
+          tier_difference: number
+          updated_at: string
+        }
+        Insert: {
+          away_goals?: number | null
+          away_team: string
+          created_at?: string
+          fixture_order: number
+          game_id: string
+          home_goals?: number | null
+          home_team: string
+          id?: string
+          tier_difference?: number
+          updated_at?: string
+        }
+        Update: {
+          away_goals?: number | null
+          away_team?: string
+          created_at?: string
+          fixture_order?: number
+          game_id?: string
+          home_goals?: number | null
+          home_team?: string
+          id?: string
+          tier_difference?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cup_fixtures_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cup_picks: {
+        Row: {
+          created_at: string
+          fixture_id: string
+          game_id: string
+          goals_counted: number | null
+          id: string
+          life_gained: number | null
+          life_spent: boolean | null
+          picked_team: string
+          preference_order: number
+          result: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          fixture_id: string
+          game_id: string
+          goals_counted?: number | null
+          id?: string
+          life_gained?: number | null
+          life_spent?: boolean | null
+          picked_team: string
+          preference_order: number
+          result?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          fixture_id?: string
+          game_id?: string
+          goals_counted?: number | null
+          id?: string
+          life_gained?: number | null
+          life_spent?: boolean | null
+          picked_team?: string
+          preference_order?: number
+          result?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cup_picks_fixture_id_fkey"
+            columns: ["fixture_id"]
+            isOneToOne: false
+            referencedRelation: "cup_fixtures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cup_picks_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fixtures: {
         Row: {
           away_score: number | null
@@ -153,6 +260,7 @@ export type Database = {
           id: string
           is_eliminated: boolean | null
           joined_at: string
+          lives: number | null
           user_id: string
         }
         Insert: {
@@ -161,6 +269,7 @@ export type Database = {
           id?: string
           is_eliminated?: boolean | null
           joined_at?: string
+          lives?: number | null
           user_id: string
         }
         Update: {
@@ -169,6 +278,7 @@ export type Database = {
           id?: string
           is_eliminated?: boolean | null
           joined_at?: string
+          lives?: number | null
           user_id?: string
         }
         Relationships: [
@@ -559,6 +669,7 @@ export type Database = {
         Args: { p_game_id: string; p_gameweek_number: number }
         Returns: undefined
       }
+      process_cup_results: { Args: { p_game_id: string }; Returns: undefined }
       sync_fixture_with_fpl: {
         Args: {
           p_code: number

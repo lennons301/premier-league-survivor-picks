@@ -13,6 +13,7 @@ import GameAdmin from "./pages/GameAdmin";
 import GameProgress from "./pages/GameProgress";
 import MakePick from "./pages/MakePick";
 import TurboPick from "./pages/TurboPick";
+import CupPick from "./pages/CupPick";
 import EscalatingPick from "./pages/EscalatingPick";
 import AdminPickEntry from "./pages/AdminPickEntry";
 import NotFound from "./pages/NotFound";
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="/games/:gameId" element={<GameDetail />} />
             <Route path="/games/:gameId/pick" element={<MakePick />} />
             <Route path="/games/:gameId/turbo-pick" element={<TurboPick />} />
+            <Route path="/games/:gameId/cup-pick" element={<CupPick />} />
             <Route path="/games/:gameId/escalating-pick" element={<EscalatingPick />} />
             <Route path="/games/:gameId/progress" element={<GameProgress />} />
             <Route path="/games/:gameId/admin" element={<GameAdmin />} />

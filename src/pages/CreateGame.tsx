@@ -10,7 +10,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import Navbar from "@/components/Navbar";
-import { Trophy, Settings, Zap, TrendingUp, Shield } from "lucide-react";
+import { Trophy, Settings, Zap, TrendingUp, Shield, Award } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { Switch } from "@/components/ui/switch";
@@ -22,7 +22,7 @@ const formSchema = z.object({
   max_players: z.number().min(2, "At least 2 players required").optional(),
   starting_gameweek: z.number().min(1, "Starting gameweek must be at least 1").max(38, "Starting gameweek cannot exceed 38"),
   deadline: z.string().min(1, "Pick deadline is required"),
-  game_mode: z.enum(["classic", "escalating", "turbo"]),
+  game_mode: z.enum(["classic", "escalating", "turbo", "cup"]),
   allow_rebuys: z.boolean(),
 });
 
@@ -112,7 +112,7 @@ const CreateGame = () => {
           created_by: user.id,
           status: 'active',
           game_mode: values.game_mode,
-          allow_rebuys: values.game_mode === "turbo" ? false : values.allow_rebuys,
+          allow_rebuys: (values.game_mode === "turbo" || values.game_mode === "cup") ? false : values.allow_rebuys,
         })
         .select()
         .single();
@@ -317,6 +317,19 @@ const CreateGame = () => {
                               </p>
                             </div>
                           </div>
+
+                          <div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                            <RadioGroupItem value="cup" id="cup" className="mt-1" />
+                            <div className="flex-1">
+                              <Label htmlFor="cup" className="flex items-center gap-2 cursor-pointer">
+                                <Award className="h-4 w-4 text-purple-500" />
+                                <span className="font-medium">FA Cup</span>
+                              </Label>
+                              <p className="text-sm text-muted-foreground mt-1">
+                                Single round cup competition. Manual fixture upload. Special rules for tier differences. Lives system for upsets.
+                              </p>
+                            </div>
+                          </div>
                         </RadioGroup>
                       </FormControl>
                       <FormMessage />
@@ -325,7 +338,7 @@ const CreateGame = () => {
                 />
 
                 {/* Allow Rebuys Toggle (only for classic and escalating) */}
-                {selectedGameMode !== "turbo" && (
+                {selectedGameMode !== "turbo" && selectedGameMode !== "cup" && (
                   <FormField
                     control={form.control}
                     name="allow_rebuys"

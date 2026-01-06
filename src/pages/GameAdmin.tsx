@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/Navbar";
 import RemovePlayerDialog from "@/components/RemovePlayerDialog";
+import CupFixtureUpload from "@/components/CupFixtureUpload";
 import { Checkbox } from "@/components/ui/checkbox";
 import { 
   Settings, Target, Users, TrendingUp, UserPlus, Calendar, 
@@ -1093,6 +1094,11 @@ const GameAdmin = () => {
           </TabsContent>
 
           <TabsContent value="fixtures" className="space-y-6">
+            {/* Cup Fixtures Upload - only for Cup mode */}
+            {game.game_mode === 'cup' && (
+              <CupFixtureUpload gameId={gameId!} />
+            )}
+
             <div className="grid gap-6 lg:grid-cols-2">
               {/* Update Fixture Results */}
               <Card>

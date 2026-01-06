@@ -189,6 +189,30 @@ export default function GameProgress() {
     },
   });
 
+  // Fetch cup picks for Cup games
+  const { data: cupPicks } = useQuery({
+    queryKey: ["cup-picks-all", gameId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("cup_picks")
+        .select(`
+          *,
+          cup_fixtures (
+            home_team,
+            away_team,
+            tier_difference,
+            home_goals,
+            away_goals
+          )
+        `)
+        .eq("game_id", gameId)
+        .order("preference_order", { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!gameId && game?.game_mode === 'cup',
+  });
+
   // Trigger deadline check when page loads and game gameweek is open
   useEffect(() => {
     if (gameId && gameGameweek?.status === 'open') {
@@ -330,6 +354,7 @@ export default function GameProgress() {
         gamePlayers={players || []}
         game={game}
         gameGameweek={gameGameweek}
+        cupPicks={cupPicks || []}
       />
     </div>
   );

@@ -1099,98 +1099,101 @@ const GameAdmin = () => {
               <CupFixtureUpload gameId={gameId!} />
             )}
 
-            <div className="grid gap-6 lg:grid-cols-2">
-              {/* Update Fixture Results */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Trophy className="h-5 w-5" />
-                    Update Fixture Results
-                  </CardTitle>
-                  <CardDescription>
-                    Enter match results for gameweek {game.current_gameweek}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label>Select Fixture</Label>
-                    <Select value={selectedFixtureId} onValueChange={setSelectedFixtureId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Choose a fixture..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {fixtures?.map((fixture) => (
-                          <SelectItem key={fixture.id} value={fixture.id}>
-                            {fixture.home_team?.name} vs {fixture.away_team?.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
+            {/* Update Fixture Results - hide for cup games (managed in CupFixtureUpload) */}
+            {game.game_mode !== 'cup' && (
+              <div className="grid gap-6 lg:grid-cols-2">
+                {/* Update Fixture Results */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Trophy className="h-5 w-5" />
+                      Update Fixture Results
+                    </CardTitle>
+                    <CardDescription>
+                      Enter match results for gameweek {game.current_gameweek}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
                     <div>
-                      <Label>Home Score</Label>
-                      <Input
-                        type="number"
-                        value={homeScore}
-                        onChange={(e) => setHomeScore(e.target.value)}
-                        min="0"
-                      />
+                      <Label>Select Fixture</Label>
+                      <Select value={selectedFixtureId} onValueChange={setSelectedFixtureId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Choose a fixture..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {fixtures?.map((fixture) => (
+                            <SelectItem key={fixture.id} value={fixture.id}>
+                              {fixture.home_team?.name} vs {fixture.away_team?.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <div>
-                      <Label>Away Score</Label>
-                      <Input
-                        type="number"
-                        value={awayScore}
-                        onChange={(e) => setAwayScore(e.target.value)}
-                        min="0"
-                      />
-                    </div>
-                  </div>
 
-                  <Button
-                    onClick={() => updateFixtureResultMutation.mutate()}
-                    disabled={updateFixtureResultMutation.isPending || !selectedFixtureId || homeScore === "" || awayScore === ""}
-                    className="w-full"
-                  >
-                    {updateFixtureResultMutation.isPending ? "Updating..." : "Update Result"}
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {/* Current Fixtures */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>GW {game.current_gameweek} Fixtures</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {fixtures?.map((fixture) => (
-                      <div key={fixture.id} className="flex items-center justify-between p-2 bg-muted rounded-lg">
-                        <div className="flex-1">
-                          <div className="font-medium">
-                            {fixture.home_team?.name} vs {fixture.away_team?.name}
-                          </div>
-                          {fixture.is_completed && (
-                            <div className="text-sm text-muted-foreground">
-                              {fixture.home_score} - {fixture.away_score}
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {fixture.is_completed ? (
-                            <CheckCircle className="h-4 w-4 text-green-600" />
-                          ) : (
-                            <XCircle className="h-4 w-4 text-red-600" />
-                          )}
-                        </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label>Home Score</Label>
+                        <Input
+                          type="number"
+                          value={homeScore}
+                          onChange={(e) => setHomeScore(e.target.value)}
+                          min="0"
+                        />
                       </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+                      <div>
+                        <Label>Away Score</Label>
+                        <Input
+                          type="number"
+                          value={awayScore}
+                          onChange={(e) => setAwayScore(e.target.value)}
+                          min="0"
+                        />
+                      </div>
+                    </div>
+
+                    <Button
+                      onClick={() => updateFixtureResultMutation.mutate()}
+                      disabled={updateFixtureResultMutation.isPending || !selectedFixtureId || homeScore === "" || awayScore === ""}
+                      className="w-full"
+                    >
+                      {updateFixtureResultMutation.isPending ? "Updating..." : "Update Result"}
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                {/* Current Fixtures */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>GW {game.current_gameweek} Fixtures</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {fixtures?.map((fixture) => (
+                        <div key={fixture.id} className="flex items-center justify-between p-2 bg-muted rounded-lg">
+                          <div className="flex-1">
+                            <div className="font-medium">
+                              {fixture.home_team?.name} vs {fixture.away_team?.name}
+                            </div>
+                            {fixture.is_completed && (
+                              <div className="text-sm text-muted-foreground">
+                                {fixture.home_score} - {fixture.away_score}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {fixture.is_completed ? (
+                              <CheckCircle className="h-4 w-4 text-green-600" />
+                            ) : (
+                              <XCircle className="h-4 w-4 text-red-600" />
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="picks" className="space-y-6">

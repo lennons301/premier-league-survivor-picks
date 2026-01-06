@@ -20,7 +20,7 @@ import { Label } from "@/components/ui/label";
 const formSchema = z.object({
   name: z.string().min(1, "Game name is required"),
   max_players: z.number().min(2, "At least 2 players required").optional(),
-  starting_gameweek: z.number().min(1, "Starting gameweek must be at least 1").max(38, "Starting gameweek cannot exceed 38"),
+  starting_gameweek: z.number().min(1, "Starting gameweek must be at least 1").max(38, "Starting gameweek cannot exceed 38").optional(),
   deadline: z.string().min(1, "Pick deadline is required"),
   game_mode: z.enum(["classic", "escalating", "turbo", "cup"]),
   allow_rebuys: z.boolean(),
@@ -90,45 +90,50 @@ const CreateGame = () => {
 
   const selectedGameMode = form.watch("game_mode");
 
-  // Update form values when nextGameweek data loads
+  // Update form values when nextGameweek data loads (only for non-cup modes)
   useEffect(() => {
-    if (nextGameweek) {
+    if (nextGameweek && selectedGameMode !== "cup") {
       form.setValue("starting_gameweek", nextGameweek.gameweek_number);
       form.setValue("deadline", nextGameweek.deadline?.slice(0, 16) || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16));
     }
-  }, [nextGameweek, form]);
+  }, [nextGameweek, form, selectedGameMode]);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     if (!user) return;
 
     try {
+      const isCupMode = values.game_mode === "cup";
+      
       const { data: gameData, error: gameError } = await supabase
         .from("games")
         .insert({
           name: values.name,
           max_players: values.max_players,
-          starting_gameweek: values.starting_gameweek,
-          current_gameweek: values.starting_gameweek,
+          starting_gameweek: isCupMode ? null : values.starting_gameweek,
+          current_gameweek: isCupMode ? null : values.starting_gameweek,
+          current_deadline: isCupMode ? new Date(values.deadline).toISOString() : null,
           created_by: user.id,
           status: 'active',
           game_mode: values.game_mode,
-          allow_rebuys: (values.game_mode === "turbo" || values.game_mode === "cup") ? false : values.allow_rebuys,
+          allow_rebuys: (values.game_mode === "turbo" || isCupMode) ? false : values.allow_rebuys,
         })
         .select()
         .single();
 
       if (gameError) throw gameError;
 
-      // Create deadline for the starting gameweek
-      const { error: deadlineError } = await supabase
-        .from("gameweek_deadlines")
-        .insert({
-          game_id: gameData.id,
-          gameweek: values.starting_gameweek,
-          deadline: new Date(values.deadline).toISOString(),
-        });
+      // Create deadline for the starting gameweek (skip for cup mode)
+      if (!isCupMode && values.starting_gameweek) {
+        const { error: deadlineError } = await supabase
+          .from("gameweek_deadlines")
+          .insert({
+            game_id: gameData.id,
+            gameweek: values.starting_gameweek,
+            deadline: new Date(values.deadline).toISOString(),
+          });
 
-      if (deadlineError) throw deadlineError;
+        if (deadlineError) throw deadlineError;
+      }
 
       // Auto-join the creator to the game
       const { error: joinError } = await supabase
@@ -223,35 +228,41 @@ const CreateGame = () => {
                   )}
                 />
                 
-                <FormField
-                  control={form.control}
-                  name="starting_gameweek"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Starting Gameweek</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          min="1"
-                          max="38"
-                          {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value))}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Which gameweek should this game start from?
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {/* Gameweek selection - hidden for Cup mode */}
+                {selectedGameMode !== "cup" && (
+                  <FormField
+                    control={form.control}
+                    name="starting_gameweek"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Starting Gameweek</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min="1"
+                            max="38"
+                            {...field}
+                            value={field.value ?? ""}
+                            onChange={(e) => field.onChange(parseInt(e.target.value))}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Which gameweek should this game start from?
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
                 
                 <FormField
                   control={form.control}
                   name="deadline"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Pick Deadline for Starting Gameweek</FormLabel>
+                      <FormLabel>
+                        {selectedGameMode === "cup" ? "Pick Deadline" : "Pick Deadline for Starting Gameweek"}
+                      </FormLabel>
                       <FormControl>
                         <Input
                           type="datetime-local"
@@ -259,7 +270,9 @@ const CreateGame = () => {
                         />
                       </FormControl>
                       <FormDescription>
-                        When should picks be due for the starting gameweek?
+                        {selectedGameMode === "cup" 
+                          ? "When should picks be due for this cup round?" 
+                          : "When should picks be due for the starting gameweek?"}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

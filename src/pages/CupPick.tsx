@@ -7,10 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Clock, Award, GripVertical, ChevronUp, ChevronDown, AlertCircle, Heart } from "lucide-react";
+import { ArrowLeft, Clock, Award, GripVertical, ChevronUp, ChevronDown, AlertCircle, Heart, Home, Plane } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface CupFixture {
   id: string;
@@ -367,6 +368,104 @@ export default function CupPick() {
           Lives save you from elimination on subsequent losses. Draw against higher tier also qualifies!
         </AlertDescription>
       </Alert>
+
+      {/* Selection Summary */}
+      {(() => {
+        // Calculate stats for top 10 picks
+        const stats = first10Fixtures.reduce((acc, fixtureId) => {
+          const fixture = fixtures.find(f => f.id === fixtureId);
+          const prediction = predictions.find(p => p.fixtureId === fixtureId);
+          
+          if (!fixture || !prediction) return acc;
+          
+          // Calculate lives from this pick
+          const tierDiffFromPicked = prediction.pickedTeam === "home" 
+            ? fixture.tier_difference 
+            : -fixture.tier_difference;
+          
+          if (tierDiffFromPicked < 0) {
+            acc.possibleLives += Math.abs(tierDiffFromPicked);
+          }
+          
+          // Count superior team picks (picking underdog against higher tier)
+          if (tierDiffFromPicked < 0) {
+            acc.superiorTeamsPicked++;
+          }
+          
+          // Count home/away picks
+          if (prediction.pickedTeam === "home") {
+            acc.homePicks++;
+          } else {
+            acc.awayPicks++;
+          }
+          
+          return acc;
+        }, { possibleLives: 0, superiorTeamsPicked: 0, homePicks: 0, awayPicks: 0 });
+        
+        const totalPicks = predictions.filter(p => first10Fixtures.includes(p.fixtureId)).length;
+        
+        return (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg">Selection Summary</CardTitle>
+              <CardDescription>Overview of your top 10 picks</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Metric</TableHead>
+                    <TableHead className="text-right">Count</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow>
+                    <TableCell className="flex items-center gap-2">
+                      <Heart className="h-4 w-4 text-green-600" />
+                      Possible Lives
+                    </TableCell>
+                    <TableCell className="text-right font-semibold text-green-600">
+                      {stats.possibleLives}
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="flex items-center gap-2">
+                      <Award className="h-4 w-4 text-purple-600" />
+                      Superior Teams Picked
+                    </TableCell>
+                    <TableCell className="text-right font-semibold text-purple-600">
+                      {stats.superiorTeamsPicked}
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="flex items-center gap-2">
+                      <Home className="h-4 w-4 text-blue-600" />
+                      Home Wins Picked
+                    </TableCell>
+                    <TableCell className="text-right font-semibold text-blue-600">
+                      {stats.homePicks}
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="flex items-center gap-2">
+                      <Plane className="h-4 w-4 text-orange-600" />
+                      Away Wins Picked
+                    </TableCell>
+                    <TableCell className="text-right font-semibold text-orange-600">
+                      {stats.awayPicks}
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+              {totalPicks < 10 && (
+                <p className="text-xs text-muted-foreground mt-2 text-center">
+                  {10 - totalPicks} pick{10 - totalPicks !== 1 ? 's' : ''} remaining
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       <Card>
         <CardHeader>

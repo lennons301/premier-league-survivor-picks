@@ -389,12 +389,14 @@ export default function CupPick() {
           }
           
           // Underdogs: picking a team from a lower tier (against higher-tier opponent)
-          if (tierDiffFromPicked > 0) {
+          // tierDiffFromPicked < 0 means picked team is lower tier than opponent
+          if (tierDiffFromPicked < 0) {
             acc.underdogsPicked++;
           }
           
           // Superior teams: picking a team from a higher tier
-          if (tierDiffFromPicked < 0) {
+          // tierDiffFromPicked > 0 means picked team is higher tier than opponent
+          if (tierDiffFromPicked > 0) {
             acc.superiorTeamsPicked++;
           }
           

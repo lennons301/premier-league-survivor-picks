@@ -108,10 +108,15 @@ const GameDetail = () => {
     enabled: !!user?.id && !!game?.current_gameweek,
   });
 
-  // Fetch current gameweek deadline
+  // Fetch current gameweek deadline - Cup mode uses current_deadline directly
   const { data: currentDeadline } = useQuery({
-    queryKey: ["current-deadline", gameId, game?.current_gameweek],
+    queryKey: ["current-deadline", gameId, game?.current_gameweek, game?.game_mode, game?.current_deadline],
     queryFn: async () => {
+      // Cup mode uses current_deadline directly from the game
+      if (game?.game_mode === "cup") {
+        return game?.current_deadline ? { deadline: game.current_deadline } : null;
+      }
+      
       if (!game?.current_gameweek) return null;
       
       // First try to get game-specific deadline
@@ -133,7 +138,7 @@ const GameDetail = () => {
       
       return globalDeadline ? { deadline: globalDeadline.deadline } : null;
     },
-    enabled: !!game?.current_gameweek,
+    enabled: !!game && (game.game_mode === "cup" || !!game.current_gameweek),
   });
 
   // Fetch game gameweek status
@@ -395,7 +400,9 @@ const GameDetail = () => {
                         {game.game_mode === "cup" && <Award size={16} className="mr-2" />}
                         {game.game_mode === "classic" && <Play size={16} className="mr-2" />}
                         {!game.game_mode && <Play size={16} className="mr-2" />}
-                        {currentPick ? `Edit Pick for GW ${game.current_gameweek}` : `Make Pick for GW ${game.current_gameweek}`}
+                        {game.game_mode === "cup" 
+                          ? (currentPick ? "Edit Cup Picks" : "Make Cup Picks")
+                          : (currentPick ? `Edit Pick for GW ${game.current_gameweek}` : `Make Pick for GW ${game.current_gameweek}`)}
                       </Button>
                     </Link>
                   )}

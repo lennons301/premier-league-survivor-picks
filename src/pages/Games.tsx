@@ -196,33 +196,47 @@ const Games = () => {
           let currentPick = null;
           let currentDeadline = null;
           if (gamePlayer.games.status === 'active') {
-            const { data: pickData } = await supabase
-              .from("picks")
-              .select("*")
-              .eq("game_id", gamePlayer.games.id)
-              .eq("user_id", user.id)
-              .eq("gameweek", gamePlayer.games.current_gameweek)
-              .maybeSingle();
-            currentPick = pickData;
-
-            // Get current gameweek deadline
-            const { data: gameDeadline } = await supabase
-              .from("gameweek_deadlines")
-              .select("deadline")
-              .eq("game_id", gamePlayer.games.id)
-              .eq("gameweek", gamePlayer.games.current_gameweek)
-              .maybeSingle();
-            
-            if (gameDeadline) {
-              currentDeadline = gameDeadline.deadline;
-            } else {
-              // Fall back to global gameweek deadline
-              const { data: globalDeadline } = await supabase
-                .from("gameweeks")
-                .select("deadline")
-                .eq("gameweek_number", gamePlayer.games.current_gameweek)
+            // Cup mode: check for cup_picks, other modes: check for picks
+            if (gamePlayer.games.game_mode === 'cup') {
+              const { data: cupPickData } = await supabase
+                .from("cup_picks")
+                .select("*")
+                .eq("game_id", gamePlayer.games.id)
+                .eq("user_id", user.id)
+                .limit(1)
                 .maybeSingle();
-              currentDeadline = globalDeadline?.deadline;
+              currentPick = cupPickData;
+              // Cup mode uses current_deadline from the game directly
+              currentDeadline = gamePlayer.games.current_deadline;
+            } else {
+              const { data: pickData } = await supabase
+                .from("picks")
+                .select("*")
+                .eq("game_id", gamePlayer.games.id)
+                .eq("user_id", user.id)
+                .eq("gameweek", gamePlayer.games.current_gameweek)
+                .maybeSingle();
+              currentPick = pickData;
+
+              // Get current gameweek deadline
+              const { data: gameDeadline } = await supabase
+                .from("gameweek_deadlines")
+                .select("deadline")
+                .eq("game_id", gamePlayer.games.id)
+                .eq("gameweek", gamePlayer.games.current_gameweek)
+                .maybeSingle();
+              
+              if (gameDeadline) {
+                currentDeadline = gameDeadline.deadline;
+              } else {
+                // Fall back to global gameweek deadline
+                const { data: globalDeadline } = await supabase
+                  .from("gameweeks")
+                  .select("deadline")
+                  .eq("gameweek_number", gamePlayer.games.current_gameweek)
+                  .maybeSingle();
+                currentDeadline = globalDeadline?.deadline;
+              }
             }
           }
           

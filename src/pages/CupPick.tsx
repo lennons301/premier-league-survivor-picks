@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Clock, Award, GripVertical, ChevronUp, ChevronDown, AlertCircle, Heart, Home, Plane } from "lucide-react";
+import { ArrowLeft, Clock, Award, GripVertical, ChevronUp, ChevronDown, AlertCircle, Heart, Home, Plane, Trophy } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -378,7 +378,8 @@ export default function CupPick() {
           
           if (!fixture || !prediction) return acc;
           
-          // Calculate lives from this pick
+          // Calculate lives from this pick (only from beating higher tier teams)
+          // tierDiffFromPicked: negative means picking a higher-tier team, positive means picking lower-tier
           const tierDiffFromPicked = prediction.pickedTeam === "home" 
             ? fixture.tier_difference 
             : -fixture.tier_difference;
@@ -387,7 +388,12 @@ export default function CupPick() {
             acc.possibleLives += Math.abs(tierDiffFromPicked);
           }
           
-          // Count superior team picks (picking underdog against higher tier)
+          // Underdogs: picking a team from a lower tier (against higher-tier opponent)
+          if (tierDiffFromPicked > 0) {
+            acc.underdogsPicked++;
+          }
+          
+          // Superior teams: picking a team from a higher tier
           if (tierDiffFromPicked < 0) {
             acc.superiorTeamsPicked++;
           }
@@ -400,7 +406,7 @@ export default function CupPick() {
           }
           
           return acc;
-        }, { possibleLives: 0, superiorTeamsPicked: 0, homePicks: 0, awayPicks: 0 });
+        }, { possibleLives: 0, underdogsPicked: 0, superiorTeamsPicked: 0, homePicks: 0, awayPicks: 0 });
         
         const totalPicks = predictions.filter(p => first10Fixtures.includes(p.fixtureId)).length;
         
@@ -434,6 +440,15 @@ export default function CupPick() {
                       Underdogs Picked
                     </TableCell>
                     <TableCell className="text-right font-semibold text-purple-600">
+                      {stats.underdogsPicked}
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="flex items-center gap-2">
+                      <Trophy className="h-4 w-4 text-amber-600" />
+                      Superior Teams Picked
+                    </TableCell>
+                    <TableCell className="text-right font-semibold text-amber-600">
                       {stats.superiorTeamsPicked}
                     </TableCell>
                   </TableRow>

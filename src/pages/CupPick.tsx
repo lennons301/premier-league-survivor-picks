@@ -490,12 +490,53 @@ export default function CupPick() {
                         )}
                       </div>
                       
+                      {/* Info badges for all fixtures */}
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        {/* Life opportunity badges */}
+                        {fixtureInfo.awayLives > 0 && (
+                          <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300">
+                            <Heart className="h-3 w-3 mr-1" />
+                            {fixture.away_team}: +{fixtureInfo.awayLives} {fixtureInfo.awayLives === 1 ? 'life' : 'lives'}
+                          </Badge>
+                        )}
+                        {fixtureInfo.homeLives > 0 && (
+                          <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300">
+                            <Heart className="h-3 w-3 mr-1" />
+                            {fixture.home_team}: +{fixtureInfo.homeLives} {fixtureInfo.homeLives === 1 ? 'life' : 'lives'}
+                          </Badge>
+                        )}
+                        {/* Invalid pick warnings */}
+                        {!fixtureInfo.homeInfo.valid && (
+                          <Badge variant="outline" className="text-xs bg-red-50 text-red-600 border-red-300">
+                            <AlertCircle className="h-3 w-3 mr-1" />
+                            {fixture.home_team}: Invalid
+                          </Badge>
+                        )}
+                        {!fixtureInfo.awayInfo.valid && (
+                          <Badge variant="outline" className="text-xs bg-red-50 text-red-600 border-red-300">
+                            <AlertCircle className="h-3 w-3 mr-1" />
+                            {fixture.away_team}: Invalid
+                          </Badge>
+                        )}
+                        {/* No goals warning */}
+                        {fixtureInfo.homeInfo.valid && fixture.tier_difference === 1 && (
+                          <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-300">
+                            {fixture.home_team}: No goals
+                          </Badge>
+                        )}
+                        {fixtureInfo.awayInfo.valid && fixture.tier_difference === -1 && (
+                          <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-300">
+                            {fixture.away_team}: No goals
+                          </Badge>
+                        )}
+                      </div>
+                      
                       {/* Pick selection - show for active picks when deadline not passed */}
                       {isActive && !isDeadlinePassed && (
                         <RadioGroup
                           value={prediction?.pickedTeam || ""}
                           onValueChange={(value) => updatePrediction(fixtureId, value as "home" | "away")}
-                          className="flex flex-wrap gap-4"
+                          className="flex flex-wrap gap-4 mt-2"
                         >
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem 
@@ -524,49 +565,6 @@ export default function CupPick() {
                             </Label>
                           </div>
                         </RadioGroup>
-                      )}
-                      
-                      {/* Info badges for non-active fixtures (11+) */}
-                      {!isActive && (
-                        <div className="flex flex-wrap gap-2 mt-1">
-                          {/* Life opportunity badges */}
-                          {fixtureInfo.awayLives > 0 && (
-                            <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300">
-                              <Heart className="h-3 w-3 mr-1" />
-                              {fixture.away_team}: +{fixtureInfo.awayLives} {fixtureInfo.awayLives === 1 ? 'life' : 'lives'}
-                            </Badge>
-                          )}
-                          {fixtureInfo.homeLives > 0 && (
-                            <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300">
-                              <Heart className="h-3 w-3 mr-1" />
-                              {fixture.home_team}: +{fixtureInfo.homeLives} {fixtureInfo.homeLives === 1 ? 'life' : 'lives'}
-                            </Badge>
-                          )}
-                          {/* Invalid pick warnings */}
-                          {!fixtureInfo.homeInfo.valid && (
-                            <Badge variant="outline" className="text-xs bg-red-50 text-red-600 border-red-300">
-                              <AlertCircle className="h-3 w-3 mr-1" />
-                              {fixture.home_team}: Invalid
-                            </Badge>
-                          )}
-                          {!fixtureInfo.awayInfo.valid && (
-                            <Badge variant="outline" className="text-xs bg-red-50 text-red-600 border-red-300">
-                              <AlertCircle className="h-3 w-3 mr-1" />
-                              {fixture.away_team}: Invalid
-                            </Badge>
-                          )}
-                          {/* No goals warning */}
-                          {fixtureInfo.homeInfo.valid && fixture.tier_difference === 1 && (
-                            <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-300">
-                              {fixture.home_team}: No goals
-                            </Badge>
-                          )}
-                          {fixtureInfo.awayInfo.valid && fixture.tier_difference === -1 && (
-                            <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-300">
-                              {fixture.away_team}: No goals
-                            </Badge>
-                          )}
-                        </div>
                       )}
                       
                       {/* Warning/info message for active picks */}

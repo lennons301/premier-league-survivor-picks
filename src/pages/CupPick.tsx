@@ -391,6 +391,23 @@ export default function CupPick() {
               const awayValid = isPickValid(fixture, "away");
               const currentPickValid = prediction ? isPickValid(fixture, prediction.pickedTeam) : null;
 
+              // Determine life/warning info for non-selected fixtures
+              const getFixtureInfo = () => {
+                const homeInfo = isPickValid(fixture, "home");
+                const awayInfo = isPickValid(fixture, "away");
+                
+                // Check if any pick gives lives
+                const homeLives = fixture.tier_difference < 0 ? Math.abs(fixture.tier_difference) : 0;
+                const awayLives = fixture.tier_difference > 0 ? fixture.tier_difference : 0;
+                
+                // Check if invalid pick exists
+                const hasInvalidOption = !homeInfo.valid || !awayInfo.valid;
+                
+                return { homeInfo, awayInfo, homeLives, awayLives, hasInvalidOption };
+              };
+              
+              const fixtureInfo = getFixtureInfo();
+
               return (
                 <div
                   key={fixtureId}
@@ -398,9 +415,12 @@ export default function CupPick() {
                   onDragStart={() => handleDragStart(fixtureId)}
                   onDragOver={(e) => handleDragOver(e, fixtureId)}
                   onDragEnd={handleDragEnd}
-                  className={`border rounded-lg p-4 transition-all ${
+                  className={`rounded-lg p-4 transition-all ${
                     draggedItem === fixtureId ? "opacity-50 scale-95" : ""
-                  } ${isActive ? "bg-card" : "bg-muted/30 opacity-60"}`}
+                  } ${isActive 
+                    ? "border bg-card" 
+                    : "border-2 border-dashed border-muted-foreground/30 bg-muted/10"
+                  }`}
                 >
                   <div className="flex items-center gap-2 sm:gap-4">
                     {/* Reorder controls */}
@@ -470,7 +490,7 @@ export default function CupPick() {
                         )}
                       </div>
                       
-                      {/* Pick selection - only show for active picks */}
+                      {/* Pick selection - show for active picks when deadline not passed */}
                       {isActive && !isDeadlinePassed && (
                         <RadioGroup
                           value={prediction?.pickedTeam || ""}
@@ -506,7 +526,50 @@ export default function CupPick() {
                         </RadioGroup>
                       )}
                       
-                      {/* Warning/info message */}
+                      {/* Info badges for non-active fixtures (11+) */}
+                      {!isActive && (
+                        <div className="flex flex-wrap gap-2 mt-1">
+                          {/* Life opportunity badges */}
+                          {fixtureInfo.awayLives > 0 && (
+                            <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300">
+                              <Heart className="h-3 w-3 mr-1" />
+                              {fixture.away_team}: +{fixtureInfo.awayLives} {fixtureInfo.awayLives === 1 ? 'life' : 'lives'}
+                            </Badge>
+                          )}
+                          {fixtureInfo.homeLives > 0 && (
+                            <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300">
+                              <Heart className="h-3 w-3 mr-1" />
+                              {fixture.home_team}: +{fixtureInfo.homeLives} {fixtureInfo.homeLives === 1 ? 'life' : 'lives'}
+                            </Badge>
+                          )}
+                          {/* Invalid pick warnings */}
+                          {!fixtureInfo.homeInfo.valid && (
+                            <Badge variant="outline" className="text-xs bg-red-50 text-red-600 border-red-300">
+                              <AlertCircle className="h-3 w-3 mr-1" />
+                              {fixture.home_team}: Invalid
+                            </Badge>
+                          )}
+                          {!fixtureInfo.awayInfo.valid && (
+                            <Badge variant="outline" className="text-xs bg-red-50 text-red-600 border-red-300">
+                              <AlertCircle className="h-3 w-3 mr-1" />
+                              {fixture.away_team}: Invalid
+                            </Badge>
+                          )}
+                          {/* No goals warning */}
+                          {fixtureInfo.homeInfo.valid && fixture.tier_difference === 1 && (
+                            <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-300">
+                              {fixture.home_team}: No goals
+                            </Badge>
+                          )}
+                          {fixtureInfo.awayInfo.valid && fixture.tier_difference === -1 && (
+                            <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-300">
+                              {fixture.away_team}: No goals
+                            </Badge>
+                          )}
+                        </div>
+                      )}
+                      
+                      {/* Warning/info message for active picks */}
                       {isActive && currentPickValid?.warning && (
                         <p className={`text-xs mt-1 ${currentPickValid.valid ? 'text-amber-600' : 'text-destructive'}`}>
                           {currentPickValid.warning}

@@ -431,7 +431,7 @@ export default function CupPick() {
                   <TableRow>
                     <TableCell className="flex items-center gap-2">
                       <Award className="h-4 w-4 text-purple-600" />
-                      Superior Teams Picked
+                      Underdogs Picked
                     </TableCell>
                     <TableCell className="text-right font-semibold text-purple-600">
                       {stats.superiorTeamsPicked}

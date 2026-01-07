@@ -326,8 +326,7 @@ const Games = () => {
                         <div className="flex flex-col gap-2">
                           <div className="flex gap-2">
                             {gamePlayer.games.status === "active" && !gamePlayer.is_eliminated && (
-                              // Cup mode doesn't use gameweek deadlines - always allow picks when active
-                              gamePlayer.games.game_mode === "cup" || (gamePlayer.games.current_deadline && new Date(gamePlayer.games.current_deadline) > new Date()) ? (
+                              gamePlayer.games.current_deadline && new Date(gamePlayer.games.current_deadline) > new Date() ? (
                                 <Link to={
                                   gamePlayer.games.game_mode === "turbo" 
                                     ? `/games/${gamePlayer.games.id}/turbo-pick` 

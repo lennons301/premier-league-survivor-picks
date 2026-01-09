@@ -45,6 +45,7 @@ interface PlayerCupStats {
   lives: number;
   goalsScored: number;
   picks: (CupPick | null)[];
+  hasMadePicks: boolean;
 }
 
 export default function CupLeaderboard({ 
@@ -80,7 +81,7 @@ export default function CupLeaderboard({
         }
       }
 
-      // Create array of 10 picks
+      // Create array of 10 picks - for pending status, show empty placeholders
       const picks: (CupPick | null)[] = Array.from({ length: 10 }, (_, i) => {
         return userPicks.find(p => p.preference_order === i + 1) || null;
       });
@@ -91,7 +92,8 @@ export default function CupLeaderboard({
         streak,
         lives: player.lives || 0,
         goalsScored,
-        picks
+        picks,
+        hasMadePicks: userPicks.length > 0
       };
     });
 
@@ -153,9 +155,14 @@ export default function CupLeaderboard({
     );
   }
 
-  const getPickCellContent = (pick: CupPick | null, isVisible: boolean) => {
+  const getPickCellContent = (pick: CupPick | null, isVisible: boolean, hasMadePicks: boolean) => {
+    // If picks are not visible yet (before deadline)
     if (!isVisible) {
-      return { label: '?', style: { backgroundColor: '#e5e7eb', color: '#6b7280' } };
+      // Show 'pending' for players who have made picks, '-' for those who haven't
+      if (hasMadePicks) {
+        return { label: 'pending', style: { backgroundColor: '#e5e7eb', color: '#6b7280', fontSize: '9px' } };
+      }
+      return { label: '-', style: { backgroundColor: '#f3f4f6', color: '#9ca3af' } };
     }
     
     if (!pick) {
@@ -183,6 +190,7 @@ export default function CupLeaderboard({
         style: { backgroundColor: '#dc2626', color: '#ffffff', fontWeight: 600 } 
       };
     } else {
+      // Pending result (after deadline but before results processed)
       return { label: teamName || '?', style: { backgroundColor: '#e5e7eb', color: '#374151' } };
     }
   };
@@ -293,7 +301,7 @@ export default function CupLeaderboard({
 
               {/* Pick cells */}
               {player.picks.map((pick, i) => {
-                const { label, style } = getPickCellContent(pick, picksAreVisible);
+                const { label, style } = getPickCellContent(pick, picksAreVisible, player.hasMadePicks);
                 
                 return (
                   <div 

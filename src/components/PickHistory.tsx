@@ -54,6 +54,7 @@ interface GameGameweek {
 interface Game {
   starting_gameweek?: number;
   game_mode?: string;
+  status?: string;
 }
 
 interface CupPick {
@@ -84,9 +85,10 @@ interface PickHistoryProps {
   game: Game;
   gameGameweek?: GameGameweek;
   cupPicks?: CupPick[];
+  cupDeadline?: string | null;
 }
 
-export default function PickHistory({ allPicks, players, currentGameweek, gameGameweeks, gamePlayers, game, gameGameweek, cupPicks = [] }: PickHistoryProps) {
+export default function PickHistory({ allPicks, players, currentGameweek, gameGameweeks, gamePlayers, game, gameGameweek, cupPicks = [], cupDeadline }: PickHistoryProps) {
   const [sortBy, setSortBy] = useState<'player' | 'fixture' | 'pick' | 'result' | 'goals' | 'gameweek'>('gameweek');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [expandedGameweeks, setExpandedGameweeks] = useState<Set<number>>(new Set());
@@ -258,9 +260,21 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
 
 
   // Check if there are any gameweeks to show (either with picks or pending picks)
+  // For Cup games, we should always show the leaderboard if there are players
+  const isCupGame = game?.game_mode === 'cup';
   const hasAnyGameweeks = gameweeks.length > 0 || (gameGameweeks && gameGameweeks.length > 0 && gamePlayers && gamePlayers.length > 0);
+  const hasPlayers = gamePlayers && gamePlayers.length > 0;
 
-  if (!hasAnyGameweeks) {
+  // For Cup games, calculate status based on deadline
+  const cupGameStatus = useMemo(() => {
+    if (!isCupGame || !cupDeadline) return 'pending';
+    const deadline = new Date(cupDeadline);
+    const now = new Date();
+    if (now < deadline) return 'pending';
+    return game?.status === 'finished' ? 'finished' : 'active';
+  }, [isCupGame, cupDeadline, game?.status]);
+
+  if (!hasAnyGameweeks && !isCupGame) {
     return (
       <Card>
         <CardHeader>
@@ -311,7 +325,7 @@ export default function PickHistory({ allPicks, players, currentGameweek, gameGa
                 <CupLeaderboard
                   allPicks={cupPicks as any}
                   gamePlayers={gamePlayers.map(p => ({ ...p, lives: p.lives || 0 }))}
-                  gameStatus={gameGameweek?.status as 'active' | 'finished' | 'pending' | undefined}
+                  gameStatus={cupGameStatus as 'active' | 'finished' | 'pending'}
                 />
               ) : (
                 <PlayerProgressTable 

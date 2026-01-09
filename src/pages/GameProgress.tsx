@@ -355,6 +355,7 @@ export default function GameProgress() {
         game={game}
         gameGameweek={gameGameweek}
         cupPicks={cupPicks || []}
+        cupDeadline={game.game_mode === 'cup' ? game.current_deadline : undefined}
       />
     </div>
   );

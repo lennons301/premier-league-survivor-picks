@@ -173,6 +173,14 @@ export default function CupLeaderboard({
       ? pick.cup_fixtures?.home_team?.substring(0, 3).toUpperCase()
       : pick.cup_fixtures?.away_team?.substring(0, 3).toUpperCase();
     
+    // Check if this pick could gain lives (underdog pick)
+    // tier_difference is from home team's perspective
+    // Positive = home team is higher tier, Negative = away team is higher tier
+    const tierDiff = pick.cup_fixtures?.tier_difference || 0;
+    const couldGainLife = pick.picked_team === 'home' 
+      ? tierDiff < 0  // Home team is lower tier (underdog)
+      : tierDiff > 0; // Away team is lower tier (underdog)
+    
     if (pick.result === 'win' || pick.result === 'draw_success') {
       const lifeIndicator = pick.life_gained > 0 ? ` +${pick.life_gained}❤️` : '';
       return { 
@@ -191,6 +199,13 @@ export default function CupLeaderboard({
       };
     } else {
       // Pending result (after deadline but before results processed)
+      // Highlight underdog picks that could gain lives
+      if (couldGainLife) {
+        return { 
+          label: `${teamName || '?'} ❤️`, 
+          style: { backgroundColor: '#fce7f3', color: '#be185d', fontWeight: 600, border: '2px solid #ec4899' } 
+        };
+      }
       return { label: teamName || '?', style: { backgroundColor: '#e5e7eb', color: '#374151' } };
     }
   };

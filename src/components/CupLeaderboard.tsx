@@ -155,7 +155,14 @@ export default function CupLeaderboard({
     );
   }
 
-  const getPickCellContent = (pick: CupPick | null, isVisible: boolean, hasMadePicks: boolean) => {
+  // Calculate the actual status of each pick considering life order
+  // Lives can only save if gained BEFORE the loss
+  const getPickCellContent = (
+    pick: CupPick | null, 
+    isVisible: boolean, 
+    hasMadePicks: boolean,
+    livesAvailableAtThisPick: number
+  ) => {
     // If picks are not visible yet (before deadline)
     if (!isVisible) {
       // Show 'pending' for players who have made picks, '-' for those who haven't
@@ -188,10 +195,19 @@ export default function CupLeaderboard({
         style: { backgroundColor: '#16a34a', color: '#ffffff', fontWeight: 600 } 
       };
     } else if (pick.result === 'saved_by_life') {
-      return { 
-        label: `${teamName || '?'} 🛡️`, 
-        style: { backgroundColor: '#eab308', color: '#000000', fontWeight: 600 } 
-      };
+      // Only show as saved if there was actually a life available at this point
+      if (livesAvailableAtThisPick > 0) {
+        return { 
+          label: `${teamName || '?'} 🛡️`, 
+          style: { backgroundColor: '#eab308', color: '#000000', fontWeight: 600 } 
+        };
+      } else {
+        // No life was available - this should be shown as a loss (elimination)
+        return { 
+          label: teamName || '?', 
+          style: { backgroundColor: '#dc2626', color: '#ffffff', fontWeight: 600 } 
+        };
+      }
     } else if (pick.result === 'loss') {
       return { 
         label: teamName || '?', 
@@ -208,6 +224,38 @@ export default function CupLeaderboard({
       }
       return { label: teamName || '?', style: { backgroundColor: '#e5e7eb', color: '#374151' } };
     }
+  };
+
+  // Calculate lives available at each pick position for a player
+  const calculateLivesAtEachPick = (picks: (CupPick | null)[]): number[] => {
+    const livesAtPick: number[] = [];
+    let currentLives = 0;
+    
+    for (const pick of picks) {
+      // Lives available BEFORE this pick's result is processed
+      livesAtPick.push(currentLives);
+      
+      if (pick) {
+        // Add lives gained from successful picks
+        if (pick.result === 'win' || pick.result === 'draw_success') {
+          currentLives += pick.life_gained || 0;
+        } else if (pick.result === 'saved_by_life' && currentLives > 0) {
+          // Life was spent
+          currentLives -= 1;
+        }
+        // On loss or saved_by_life with no lives, streak is broken - stop counting
+        if (pick.result === 'loss' || (pick.result === 'saved_by_life' && livesAtPick[livesAtPick.length - 1] <= 0)) {
+          break;
+        }
+      }
+    }
+    
+    // Fill remaining slots with 0
+    while (livesAtPick.length < 10) {
+      livesAtPick.push(0);
+    }
+    
+    return livesAtPick;
   };
 
   return (
@@ -315,24 +363,27 @@ export default function CupLeaderboard({
               </div>
 
               {/* Pick cells */}
-              {player.picks.map((pick, i) => {
-                const { label, style } = getPickCellContent(pick, picksAreVisible, player.hasMadePicks);
-                
-                return (
-                  <div 
-                    key={i} 
-                    className="w-16 sm:w-20 shrink-0 p-0.5 flex items-center justify-center"
-                  >
+              {(() => {
+                const livesAtEachPick = calculateLivesAtEachPick(player.picks);
+                return player.picks.map((pick, i) => {
+                  const { label, style } = getPickCellContent(pick, picksAreVisible, player.hasMadePicks, livesAtEachPick[i]);
+                  
+                  return (
                     <div 
-                      className="w-full h-7 sm:h-8 flex items-center justify-center text-[9px] sm:text-xs rounded text-center px-1"
-                      style={style}
-                      title={pick?.cup_fixtures ? `${pick.cup_fixtures.home_team} vs ${pick.cup_fixtures.away_team}` : undefined}
+                      key={i} 
+                      className="w-16 sm:w-20 shrink-0 p-0.5 flex items-center justify-center"
                     >
-                      {label}
+                      <div 
+                        className="w-full h-7 sm:h-8 flex items-center justify-center text-[9px] sm:text-xs rounded text-center px-1"
+                        style={style}
+                        title={pick?.cup_fixtures ? `${pick.cup_fixtures.home_team} vs ${pick.cup_fixtures.away_team}` : undefined}
+                      >
+                        {label}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                });
+              })()}
             </div>
           ))}
         </div>

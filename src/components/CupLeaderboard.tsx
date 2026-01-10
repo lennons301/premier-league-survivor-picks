@@ -64,21 +64,34 @@ export default function CupLeaderboard({
         .filter(p => p.user_id === player.user_id)
         .sort((a, b) => (a.preference_order || 0) - (b.preference_order || 0));
 
-      // Calculate streak (consecutive successful picks)
+      // Calculate streak, goals and remaining lives using the same
+      // sequential life rules (lives can only be spent if already earned).
       let streak = 0;
       let goalsScored = 0;
-      
+      let livesRemaining = 0;
+
       for (const pick of userPicks) {
-        const isSuccess = pick.result === 'win' || pick.result === 'draw_success' || pick.result === 'saved_by_life';
-        if (isSuccess) {
+        if (pick.result === 'win' || pick.result === 'draw_success') {
           streak++;
           goalsScored += pick.goals_counted || 0;
-        } else if (pick.result === 'loss') {
-          break;
-        } else {
-          // Pending - stop counting
+          livesRemaining += pick.life_gained || 0;
+          continue;
+        }
+
+        if (pick.result === 'saved_by_life') {
+          // Only a success if a life existed BEFORE this pick.
+          if (livesRemaining > 0) {
+            streak++;
+            goalsScored += pick.goals_counted || 0;
+            livesRemaining -= 1;
+            continue;
+          }
+          // No life existed to spend → eliminated here.
           break;
         }
+
+        // loss or pending
+        break;
       }
 
       // Create array of 10 picks - for pending status, show empty placeholders
@@ -90,7 +103,7 @@ export default function CupLeaderboard({
         userId: player.user_id,
         displayName: player.profiles?.display_name || 'Unknown',
         streak,
-        lives: player.lives || 0,
+        lives: livesRemaining,
         goalsScored,
         picks,
         hasMadePicks: userPicks.length > 0

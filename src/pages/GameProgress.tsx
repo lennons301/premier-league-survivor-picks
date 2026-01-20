@@ -33,36 +33,43 @@ export default function GameProgress() {
         .rpc("calculate_prize_pot", { p_game_id: gameId });
 
       // Get winner(s) if game is finished
-      let winner = null;
-      let winners = null;
+      let winner: { display_name: string } | null = null;
+      let winners: any[] | null = null;
       let isSplit = false;
+
       if (data.status === 'finished') {
-        // Check if there are split winners
-        const { data: splitWinners } = await supabase
+        // Source of truth: game_winners rows (supports split + single)
+        const { data: winnerRows, error: winnersError } = await supabase
           .from("game_winners")
-          .select(`
-            user_id,
-            payout_amount,
-            is_split,
-            profiles:user_id (display_name)
-          `)
+          .select("user_id,payout_amount,is_split")
           .eq("game_id", gameId);
-        
-        if (splitWinners && splitWinners.length > 0) {
-          winners = splitWinners;
-          isSplit = splitWinners[0].is_split;
-        } else {
-          // Fall back to single winner
-          const { data: winnerUserId } = await supabase
-            .rpc("get_game_winner", { p_game_id: gameId });
-          if (winnerUserId) {
-            const { data: winnerProfile } = await supabase
-              .from("profiles")
-              .select("display_name")
-              .eq("user_id", winnerUserId)
-              .single();
-            winner = winnerProfile;
-          }
+
+        if (winnersError) throw winnersError;
+
+        if (winnerRows && winnerRows.length > 0) {
+          const winnerUserIds = winnerRows.map((w) => w.user_id);
+          const { data: winnerProfiles, error: profilesError } = await supabase
+            .from("profiles")
+            .select("user_id,display_name")
+            .in("user_id", winnerUserIds);
+
+          if (profilesError) throw profilesError;
+
+          winners = winnerRows.map((w) => ({
+            ...w,
+            profiles: winnerProfiles?.find((p) => p.user_id === w.user_id),
+          }));
+          isSplit = !!winnerRows[0].is_split;
+        } else if (data.winner_id) {
+          // Fallback: winner_id on games (no RPC to avoid stale/incorrect results)
+          const { data: winnerProfile, error: winnerProfileError } = await supabase
+            .from("profiles")
+            .select("display_name")
+            .eq("user_id", data.winner_id)
+            .maybeSingle();
+
+          if (winnerProfileError) throw winnerProfileError;
+          if (winnerProfile) winner = winnerProfile;
         }
       }
 

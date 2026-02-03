@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useFPLSync } from "@/hooks/useFPLSync";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Trophy, Users, Target, Calendar, Shield, Plus } from "lucide-react";
@@ -9,6 +11,12 @@ import { useQuery } from "@tanstack/react-query";
 
 const Index = () => {
   const { user, loading } = useAuth();
+  const { syncFPLData } = useFPLSync();
+
+  // Sync FPL data on page load
+  useEffect(() => {
+    syncFPLData();
+  }, [syncFPLData]);
 
   // Fetch active games for stats
   const { data: gameStats } = useQuery({

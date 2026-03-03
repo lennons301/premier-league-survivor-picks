@@ -647,6 +647,32 @@ const GameAdmin = () => {
     },
   });
 
+  // Mutation to undo elimination
+  const undoEliminationMutation = useMutation({
+    mutationFn: async ({ userId }: { userId: string }) => {
+      const { error } = await supabase
+        .from("game_players")
+        .update({ is_eliminated: false, eliminated_gameweek: null })
+        .eq("game_id", gameId)
+        .eq("user_id", userId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Elimination undone",
+        description: "Player has been restored to active status",
+      });
+      queryClient.invalidateQueries({ queryKey: ["game-players", gameId] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error undoing elimination",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleRemovePlayer = (playerId: string, playerName: string, userId: string) => {
     setRemovePlayerDialog({
       isOpen: true,
@@ -1294,7 +1320,19 @@ const GameAdmin = () => {
                       <span className="font-medium">{(player as any).profiles?.display_name || "Unknown"}</span>
                       <div className="flex items-center gap-2">
                         {player.is_eliminated ? (
-                          <Badge variant="destructive">Eliminated GW{player.eliminated_gameweek}</Badge>
+                          <>
+                            <Badge variant="destructive">Eliminated GW{player.eliminated_gameweek}</Badge>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => undoEliminationMutation.mutate({ userId: player.user_id })}
+                              disabled={undoEliminationMutation.isPending}
+                              className="h-8 px-2 text-xs"
+                            >
+                              <Unlock className="h-3 w-3 mr-1" />
+                              Undo
+                            </Button>
+                          </>
                         ) : (
                           <Badge variant="secondary">Active</Badge>
                         )}
